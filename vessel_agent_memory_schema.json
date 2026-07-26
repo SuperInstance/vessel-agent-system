@@ -1,0 +1,1190 @@
+{
+  "_meta": {
+    "schema_version": "1.0.0",
+    "schema_type": "vessel_agent_memory",
+    "created": "2026-07-24T00:00:00Z",
+    "last_updated": "2026-07-24T15:30:00Z",
+    "vessel_id": "US-AK-FVCATCHER-01",
+    "vessel_name": "EILEEN",
+    "home_port": "Southeast Alaska",
+    "methodology": "BMAD"
+  },
+  "system_architecture": {
+    "development_methodology": {
+      "name": "BMAD",
+      "description": "Bottom-up, Multi-level, Agile Development",
+      "principles": [
+        "Bottom-up: Start with raw bits, build upward through abstraction layers",
+        "Multi-level: Maintain clear boundaries between abstraction levels",
+        "Agile: 2-week sprints with continuous deployment",
+        "Long-term vision: 5-year horizon with clear milestones"
+      ],
+      "abstraction_levels": {
+        "level_0": {
+          "name": "Raw Bits",
+          "description": "Network packets, NMEA bytes, raw sensor data",
+          "status": "in_progress",
+          "focus": "Lossless UDP packet capture, NMEA parsing, zero-copy ring buffer",
+          "success_criteria": {
+            "capture_rate": ">99.9%",
+            "packet_loss": "<0.1%",
+            "uptime": ">99% during operations"
+          }
+        },
+        "level_1": {
+          "name": "Physical Tensors",
+          "description": "Sv dB, meters per bin, H3 coordinates, physical normalization",
+          "status": "planned",
+          "focus": "Hardware-agnostic normalization, spatial indexing, physical calibration",
+          "success_criteria": {
+            "position_error": "<5m at 10 knots",
+            "depth_precision": "<0.5m",
+            "sv_calibration": "<1dB variance"
+          }
+        },
+        "level_2": {
+          "name": "Analytical Features",
+          "description": "Biomass density, species signatures, pattern recognition",
+          "status": "planned",
+          "focus": "Feature extraction, classification, pattern mining",
+          "success_criteria": {
+            "species_accuracy": ">70% for 3 species",
+            "biomass_precision": ">80%",
+            "bottom_classification": ">85%"
+          }
+        },
+        "level_3": {
+          "name": "Operational Intelligence",
+          "description": "Catch predictions, fleet recommendations, route optimization",
+          "status": "planned",
+          "focus": "Decision support, real-time alerts, collaborative intelligence",
+          "success_criteria": {
+            "catch_prediction": ">60% at 24h",
+            "cpue_improvement": ">15%",
+            "fleet_adoption": "5+ vessels"
+          }
+        },
+        "level_4": {
+          "name": "Strategic Knowledge",
+          "description": "Stock assessments, ecosystem understanding, scenario planning",
+          "status": "planned",
+          "focus": "Long-term trends, regulatory integration, scientific collaboration",
+          "success_criteria": {
+            "biomass_estimate": "within 20% of surveys",
+            "publications": "3+ peer-reviewed",
+            "regulatory_acceptance": "ADF&G integration"
+          }
+        }
+      }
+    },
+    "roadmap": {
+      "year_1": {
+        "period": "2026-2027",
+        "focus": "Foundation - Level 0 & 1",
+        "deliverables": [
+          "Continuous acoustic data capture at 15Hz",
+          "All data triply-anchored (time/location/source)",
+          "Hardware-agnostic Parquet storage",
+          "Query-ready spatial database"
+        ],
+        "status": "in_progress"
+      },
+      "year_2": {
+        "period": "2027-2028",
+        "focus": "Analysis - Level 2",
+        "deliverables": [
+          "Working species classifier (3 species, 70%+ accuracy)",
+          "Automated biomass density maps",
+          "Bottom classification database",
+          "Pattern library for SE Alaska fisheries"
+        ],
+        "status": "planned"
+      },
+      "year_3": {
+        "period": "2028-2029",
+        "focus": "Intelligence - Level 3",
+        "deliverables": [
+          "Working catch prediction system",
+          "Gear deployment optimizer",
+          "Fleet-wide data sharing (3-5 vessels)",
+          "Real-time decision support dashboard"
+        ],
+        "status": "planned"
+      },
+      "year_4": {
+        "period": "2029-2030",
+        "focus": "Strategy - Level 4",
+        "deliverables": [
+          "Automated stock assessment system",
+          "Ecosystem trend dashboard",
+          "Multi-species interaction models",
+          "Scenario planning tools"
+        ],
+        "status": "planned"
+      },
+      "year_5": {
+        "period": "2030-2031",
+        "focus": "Maturity - Full Ecosystem",
+        "deliverables": [
+          "Mature fleet intelligence ecosystem",
+          "10+ contributing vessels",
+          "Full regulatory agency integration",
+          "Open-source tools for community"
+        ],
+        "status": "planned"
+      }
+    }
+  },
+  "data_schemas": {
+    "core_anchor": {
+      "description": "Every data point must include temporal, spatial, and provenance metadata",
+      "temporal_anchor": {
+        "timestamp_ns": "integer (nanosecond epoch)",
+        "ping_sequence_id": "integer (monotonic counter)",
+        "mutation_epoch_ms": "integer (vector clock)"
+      },
+      "spatial_anchor": {
+        "latitude": "float (sub-second interpolated)",
+        "longitude": "float (sub-second interpolated)",
+        "h3_index_uint64": "string (hex spatial hash)",
+        "heading_true": "float (vessel orientation)",
+        "transducer_depth_m": "float (keel reference)"
+      },
+      "source_provenance": {
+        "vessel_uuid": "string (fleet-wide unique ID)",
+        "hardware_source": "string (device model)",
+        "pipeline_version": "string (semantic versioning)"
+      },
+      "environmental_context": {
+        "surface_temp_c": "float",
+        "sound_velocity_mps": "float",
+        "frequency_hz": "integer",
+        "transmit_power_watts": "integer"
+      }
+    },
+    "acoustic_record": {
+      "type": "acoustic_ping",
+      "timestamp_ns": "integer",
+      "ping_sequence_id": "integer",
+      "vessel_uuid": "string",
+      "spatial": {
+        "latitude": "float",
+        "longitude": "float",
+        "h3_index_uint64": "string",
+        "heading_true": "float",
+        "transducer_depth_m": "float"
+      },
+      "acoustic": {
+        "frequency_hz": "integer",
+        "pulse_length_ms": "float",
+        "configured_range_meters": "float",
+        "meters_per_bin": "float",
+        "sound_velocity_mps": "float",
+        "backscatter_tensor_db": "array of floats (Sv in dB)"
+      },
+      "environmental": {
+        "surface_temp_c": "float",
+        "transmit_power_watts": "integer",
+        "gain_setting": "float"
+      },
+      "metadata": {
+        "hardware_source": "string",
+        "pipeline_version": "string",
+        "classification": "string or null",
+        "confidence": "float or null",
+        "ground_truth_label": "string or null"
+      }
+    },
+    "catch_event": {
+      "type": "catch_event",
+      "timestamp_start_ns": "integer",
+      "timestamp_end_ns": "integer",
+      "vessel_uuid": "string",
+      "location": {
+        "h3_cells": "array of strings",
+        "bounding_box": {
+          "min_lat": "float",
+          "max_lat": "float",
+          "min_lon": "float",
+          "max_lon": "float"
+        }
+      },
+      "catch": {
+        "species": "string",
+        "weight_lbs": "float",
+        "count_estimate": "integer",
+        "depth_range_fm": "array of 2 integers"
+      },
+      "gear": {
+        "type": "string",
+        "deployment_duration_min": "integer",
+        "avg_speed_knots": "float",
+        "lure_depth_fm": "integer"
+      },
+      "environmental": {
+        "surface_temp_c": "float",
+        "wind_speed_knots": "float",
+        "wave_height_m": "float",
+        "bottom_depth_m": "float"
+      },
+      "metadata": {
+        "crew_report_source": "string",
+        "report_confidence": "string",
+        "observer_id": "string"
+      }
+    },
+    "crew_report": {
+      "type": "crew_report",
+      "timestamp_ns": "integer",
+      "vessel_uuid": "string",
+      "report_source": {
+        "type": "voice_transcript",
+        "original_audio_path": "string",
+        "transcript_text": "string",
+        "speaker_id": "string",
+        "confidence": "float"
+      },
+      "spatial": {
+        "latitude": "float",
+        "longitude": "float",
+        "h3_index_uint64": "string"
+      },
+      "observations": {
+        "species_mentioned": "array of strings",
+        "depth_range_fm": "array of 2 integers",
+        "bait_presence": "boolean",
+        "water_clarity": "string"
+      },
+      "metadata": {
+        "processing_model": "string",
+        "pipeline_version": "string"
+      }
+    },
+    "fleet_report": {
+      "type": "fleet_report",
+      "timestamp_ns": "integer",
+      "source": "phone_voice_input",
+      "reporter": {
+        "vessel_uuid": "string",
+        "vessel_name": "string"
+      },
+      "informant": {
+        "vessel": "string",
+        "vessel_id": "string",
+        "communication_method": "vhf_radio | cell_phone | in_person"
+      },
+      "location": {
+        "name": "string",
+        "h3_index": "string",
+        "depth_fm": "integer",
+        "approximate": "boolean"
+      },
+      "catch_info": {
+        "species": "string",
+        "tide": "string",
+        "confidence": "string"
+      },
+      "verification": "pending | confirmed | unconfirmed"
+    },
+    "visual_observation": {
+      "type": "visual_observation",
+      "timestamp_ns": "integer",
+      "source": "phone_camera",
+      "media_type": "photo | video | screenshot",
+      "file_path": "string",
+      "location": {
+        "latitude": "float",
+        "longitude": "float",
+        "h3_index": "string"
+      },
+      "context": {
+        "captain_note": "string",
+        "weather_conditions": "string",
+        "time_of_day": "string"
+      },
+      "analysis": {
+        "detected_features": "array of strings",
+        "confidence": "float"
+      }
+    },
+    "weather_observation": {
+      "type": "weather_observation",
+      "timestamp_ns": "integer",
+      "source": "laptop_weather_api",
+      "provider": "string",
+      "location": {
+        "latitude": "float",
+        "longitude": "float",
+        "h3_index": "string"
+      },
+      "conditions": {
+        "wind_speed_knots": "float",
+        "wind_direction_deg": "float",
+        "wind_gust_knots": "float",
+        "air_temp_c": "float",
+        "sea_level_pressure_mb": "float",
+        "visibility_nm": "float",
+        "cloud_cover_pct": "float",
+        "precipitation_type": "string"
+      },
+      "forecast": {
+        "next_6_hours": {
+          "wind_trend": "string",
+          "temp_trend": "string",
+          "precipitation_probability": "float"
+        }
+      }
+    },
+    "tide_observation": {
+      "type": "tide_observation",
+      "timestamp_ns": "integer",
+      "source": "laptop_tide_api",
+      "provider": "string",
+      "station_id": "string",
+      "location": {
+        "name": "string",
+        "latitude": "float",
+        "longitude": "float",
+        "h3_index": "string"
+      },
+      "tide": {
+        "type": "flood | ebb | slack",
+        "height_m": "float",
+        "sl_time": "string",
+        "range_m": "float",
+        "current_speed_mps": "float"
+      },
+      "prediction": {
+        "next_high_slack": "string",
+        "next_low_slack": "string"
+      }
+    },
+    "market_price": {
+      "type": "market_price",
+      "timestamp_ns": "integer",
+      "source": "laptop_market_api",
+      "provider": "string",
+      "species": "string",
+      "prices": {
+        "per_lbs": "float",
+        "currency": "string",
+        "trend": "rising | falling | stable"
+      },
+      "volume": {
+        "total_lbs": "integer",
+        "your_share_lbs": "integer | null"
+      },
+      "quality_adjustments": {
+        "premium_grades": "string",
+        "bonus_for": "string"
+      }
+    },
+    "voice_conversation": {
+      "type": "voice_conversation",
+      "timestamp_ns": "integer",
+      "location": {
+        "latitude": "float",
+        "longitude": "float",
+        "h3_index": "string"
+      },
+      "vessel_id": "string",
+      "source": "phone_voice_interface",
+      "question": "string",
+      "answer": "string",
+      "context": {
+        "date": "string",
+        "location": "string",
+        "query_type": "string"
+      },
+      "metadata": {
+        "query_duration_ms": "integer",
+        "data_sources": "array of strings",
+        "confidence": "string",
+        "related_conversations": "array of strings"
+      }
+    },
+    "jog_lever_input": {
+      "type": "physical_input",
+      "device": "ESP32_JogLever",
+      "connection": "bluetooth | wifi",
+      "lane": "critical",
+      "timestamp_ns": "integer",
+      "location": {
+        "latitude": "float",
+        "longitude": "float",
+        "h3_index": "string"
+      },
+      "input": {
+        "direction": "port | starboard | center",
+        "magnitude": "float",
+        "active": "boolean"
+      },
+      "metadata": {
+        "battery_level": "float",
+        "signal_strength": "float",
+        "last_seen": "integer"
+      }
+    },
+    "switch_input": {
+      "type": "physical_input",
+      "device": "ESP32_SwitchArray",
+      "connection": "wifi",
+      "timestamp_ns": "integer",
+      "input": {
+        "switch_id": "string",
+        "state": "on | off",
+        "location": "deck | engine_room | cabin"
+      },
+      "metadata": {
+        "power_consumption_watts": "float"
+      }
+    },
+    "throttle_encoder": {
+      "type": "physical_input",
+      "device": "ESP32_ThrottleEncoder",
+      "connection": "wifi",
+      "timestamp_ns": "integer",
+      "input": {
+        "position_pct": "float",
+        "delta": "float",
+        "commanded": "boolean"
+      },
+      "metadata": {
+        "rpm": "float",
+        "fuel_flow_gph": "float"
+      }
+    },
+    "gps_array_input": {
+      "type": "sensor_array",
+      "device": "ESP32_GPSArray",
+      "connection": "wifi",
+      "timestamp_ns": "integer",
+      "location": {
+        "primary_gps": { "lat": "float", "lon": "float", "hdop": "float", "sats": "integer" },
+        "secondary_gps": { "lat": "float", "lon": "float", "hdop": "float", "sats": "integer" },
+        "computed_heading": "float",
+        "heading_confidence": "float"
+      },
+      "metadata": {
+        "gps_separation_m": "float",
+        "baseline_heading": "float"
+      }
+    },
+    "tilt_sensor_input": {
+      "type": "sensor_array",
+      "device": "ESP32_IMU",
+      "connection": "bluetooth",
+      "timestamp_ns": "integer",
+      "orientation": {
+        "pitch_deg": "float",
+        "roll_deg": "float",
+        "yaw_deg": "float"
+      },
+      "motion": {
+        "acceleration_x": "float",
+        "acceleration_y": "float",
+        "acceleration_z": "float",
+        "gyro_x": "float",
+        "gyro_y": "float",
+        "gyro_z": "float"
+      },
+      "metadata": {
+        "calibration_status": "calibrated | needs_calibration",
+        "temperature_c": "float"
+      }
+    },
+    "temperature_array_input": {
+      "type": "sensor_array",
+      "device": "ESP32_TemperatureArray",
+      "connection": "wifi",
+      "timestamp_ns": "integer",
+      "sensors": "array",
+      "metadata": {
+        "alarm_threshold_c": "float",
+        "warning_threshold_c": "float"
+      }
+    },
+    "camera_feed": {
+      "type": "camera_feed",
+      "device": "RaspberryPi_Camera | USB_Camera",
+      "connection": "wifi | usb",
+      "timestamp_ns": "integer",
+      "stream": {
+        "url": "string",
+        "resolution": "string",
+        "fps": "float",
+        "codec": "string"
+      },
+      "location": {
+        "name": "engine_room | deck | forward | stern | workstation",
+        "position": { "lat": "float", "lon": "float", "heading": "float" }
+      },
+      "analysis": {
+        "motion_detected": "boolean",
+        "faces_detected": "integer",
+        "objects_detected": "array of strings"
+      },
+      "metadata": {
+        "storage_enabled": "boolean",
+        "retention_hours": "float",
+        "bandwidth_kbps": "float"
+      }
+    },
+    "portable_controller": {
+      "type": "controller_display",
+      "device": "ESP32_TFT_Controller",
+      "connection": "wifi",
+      "timestamp_ns": "integer",
+      "display": {
+        "resolution": "string",
+        "orientation": "landscape | portrait",
+        "brightness": "float"
+      },
+      "controls": {
+        "buttons": "array",
+        "sliders": "array",
+        "encoders": "array"
+      },
+      "metadata": {
+        "battery_level": "float",
+        "location": "wheelhouse | deck | engine_room | pocket"
+      }
+    },
+    "marine_dashboard": {
+      "type": "dashboard_display",
+      "device": "Tablet | Monitor | Phone",
+      "connection": "wifi",
+      "timestamp_ns": "integer",
+      "layout": {
+        "style": "marine_dashboard | code_editor | reason_rack",
+        "gauges": "array"
+      },
+      "location": {
+        "name": "wheelhouse_main | wheelhouse_secondary | engine_room | cabin"
+      }
+    },
+    "device_registration": {
+      "type": "device_registration",
+      "device_id": "string",
+      "device_type": "input | output | sensor | camera | controller",
+      "connection": "bluetooth | wifi | usb",
+      "capabilities": "array of strings",
+      "metadata": {
+        "name": "string",
+        "manufacturer": "string",
+        "firmware_version": "string",
+        "battery_level": "float"
+      },
+      "registration_time": "integer",
+      "last_heartbeat": "integer"
+    },
+    "track_assignment": {
+      "type": "track_assignment",
+      "device_id": "string",
+      "track_name": "string",
+      "track_type": "continuous | event | critical",
+      "lane": "critical | telemetry | narrative",
+      "update_frequency_hz": "float",
+      "data_source": "string",
+      "display_config": {
+        "color": "string",
+        "line_style": "solid | dashed | dotted",
+        "icon": "string"
+      }
+    }
+  },
+  "multi_panel_interface": {
+    "architecture": "3-Viewer + Chatbot Panel System",
+    "viewer_mode": "Tabs/Windows (not simultaneous panels)",
+    "viewers": {
+      "markdown_editor": {
+        "name": "Markdown/Code Editor (Front View - Cross-Section Analysis)",
+        "purpose": "Analysis as first-class objects - Markdown documents and JSON data structures",
+        "technology": "Theia IDE (open-source, agent-native, web-based)",
+        "deployment": "Boat workstation or cloud instance, edge devices connect headless",
+        "device_support": {
+          "workstation": "Full Theia UI",
+          "tablet": "Full Theia UI",
+          "phone": "Read-only, minimal resources",
+          "edge_device": "Headless connection only"
+        },
+        "first_class_citizens": [
+          "Markdown documents (daily logs, analysis summaries)",
+          "JSON data structures (acoustic signatures, catch events)",
+          "Analysis reports (species classification, biomass estimates)",
+          "Physical IO logs (switches, encoders, sensors)",
+          "Camera feeds (engine room, deck, forward)",
+          "Portable controllers (Reason-style racks)"
+        ],
+        "features": [
+          "Markdown preview with syntax highlighting",
+          "JSON syntax validation and formatting",
+          "Document templates for common analysis types",
+          "Agent-generated content integration",
+          "Export to PDF, HTML, JSON",
+          "Real-time gauge display (marine dashboard)",
+          "Camera feed monitoring",
+          "Controller rack display (Reason-style)"
+        ],
+        "example_content": {
+          "daily_summary": "# Daily Catch Summary - July 23, 2026\n\n## Species Breakdown\n- King Salmon: 5 fish, avg 12.4lbs\n- Chum Salmon: 23 fish, avg 8.2lbs\n\n## Acoustic Signatures Detected\n| Time | Position | Depth | Confidence | Species |\n|------|----------|-------|------------|---------|",
+          "json_object": "{\"analysis_id\": \"daily_catch_2026-07-23\", \"acoustic_signatures\": [{\"timestamp_ns\": 1721741135000000000, \"h3_index\": \"0x8a21104523fffff\", \"depth_fm\": 35, \"sv_mean\": -38.4, \"classification\": {\"species\": \"chum\", \"confidence\": 0.94}}]}"
+        }
+      },
+      "daw_timeline": {
+        "name": "DAW Timeline Viewer (Side View - Time-First Representation)",
+        "purpose": "Timing-critical correlation between multiple data streams",
+        "metaphor": "Digital Audio Workstation - Multi-track temporal orchestration",
+        "phase_1_mvp": {
+          "implementation": "Basic timeline based on file timestamps",
+          "features": [
+            "Simple event plotting over time",
+            "File timestamp extraction",
+            "Basic temporal visualization"
+          ],
+          "status": "MVP priority"
+        },
+        "phase_2_full": {
+          "implementation": "Full DAW with multi-track overlay",
+          "features": [
+            "Multi-track overlay and correlation views",
+            "Scrubbing and playback",
+            "Temporal zoom levels (day/hour/minute/second)",
+            "Waveform-style acoustic visualization"
+          ],
+          "status": "Later phase"
+        },
+        "tracks": [
+          {"name": "Acoustic Track", "data": "Sounder pings, backscatter values"},
+          {"name": "GPS Track", "data": "Position, heading, speed over ground"},
+          {"name": "Catch Track", "data": "Bite events, landed fish"},
+          {"name": "Gear Track", "data": "Line deployment, retrieval, lure changes"},
+          {"name": "Environmental Track", "data": "Temperature, wind, tide"}
+        ],
+        "correlation_example": {
+          "scenario": "Sounder ping → Line bite → Time delay → Spatial location",
+          "timeline": [
+            {"time": "14:32:15", "event": "Sounder detects fish at 35fm, position X"},
+            {"time": "14:32:17", "event": "Boat at position X, heading 180°"},
+            {"time": "14:37:20", "event": "Bite on line #3 (5 minutes 3 seconds later)"},
+            {"time": "14:37:22", "event": "Boat at position Y (line passed through position X)"}
+          ],
+          "conclusion": "Fish was at position X, line intercepted at X 5m3s later"
+        }
+      },
+      "spatial_chart": {
+        "name": "Spatial Chart Viewer (Top View - Space-First Representation)",
+        "purpose": "Spatial visualization of fishing operations with depth + motion vectors",
+        "human_ui": {
+          "platform": "TimeZero Professional (TZ Pro)",
+          "usage": "Direct use for human visualization",
+          "features": "Tracklines, marks, layers (already familiar to captain)",
+          "injection": "Agent can drop marks in TZ Pro object layer"
+        },
+        "agent_spatial_awareness": {
+          "platform": "Headless OpenCPN (digital twin)",
+          "purpose": "Spatial queries without UI requirement",
+          "capabilities": "Spatial reasoning, vector field calculations, H3 indexing"
+        },
+        "first_class_spatial_data": [
+          {"name": "SOC/COG", "description": "Speed/Course Over Ground"},
+          {"name": "Heading", "description": "Vessel orientation"},
+          {"name": "STW", "description": "Speed Through Water"},
+          {"name": "Depth", "description": "Sounder reading at each point"},
+          {"name": "Vectors", "description": "Motion direction and velocity"}
+        ],
+        "injection_example": {
+          "query": "Drop marks where yesterday's 5 king salmon were caught",
+          "result": "Agent injects marks into TZ Pro object layer with timestamp, depth, species info"
+        },
+        "tzpro_integration": {
+          "read_path": "TZ Pro Project Files → Agent Parser → Spatial Awareness",
+          "write_path": "Agent Query → TZ Pro Object API → Mark/Layer Creation → TZ Pro Display",
+          "data_types": ["Marks (point features)", "Tracklines (line features)", "Layers (feature collections)", "Object properties (timestamp, depth, species)"]
+        }
+      }
+    },
+    "chatbot_panel": {
+      "name": "AI Assistant Panel (Collapsible - Either Side)",
+      "purpose": "AI assistant available across all viewers",
+      "behavior": "Context-aware based on current viewer",
+      "features": [
+        "Collapsible and movable to either side",
+        "Voice I/O (STT/TTS) for phones",
+        "Persistent across all 3 viewers"
+      ],
+      "context_by_viewer": {
+        "markdown_editor": [
+          "\"Create a daily catch summary from today's data\"",
+          "\"Add a section to this document analyzing acoustic signatures\"",
+          "\"Format this JSON as a readable table\""
+        ],
+        "daw_timeline": [
+          "\"Show me 15 minutes before and after the 14:32 bite event\"",
+          "\"Highlight all acoustic signatures > -30dB\"",
+          "\"Create a new track for water temperature\""
+        ],
+        "spatial_chart": [
+          "\"Drop marks where we caught king salmon yesterday\"",
+          "\"Show me the trackline for the morning set\"",
+          "\"Highlight all H3 cells with biomass density > threshold\""
+        ]
+      }
+    },
+    "cross_viewer_linking": {
+      "core_concept": "Event highlighted in one viewer can be found in others",
+      "event_id_system": {
+        "event_id": "string (Unique across all viewers)",
+        "timestamp_ns": "integer",
+        "position": {"lat": "float", "lon": "float", "depth_fm": "float"},
+        "daw": {"track_id": "string", "start_time": "integer", "duration": "integer"},
+        "spatial": {"tzpro_object_id": "string", "opencpn_waypoint": "string"},
+        "markdown": {"document_id": "string", "section_id": "string"}
+      },
+      "linking_examples": [
+        {"from": "DAW", "to": "Markdown", "action": "Click acoustic signature → Opens analysis"},
+        {"from": "Spatial", "to": "DAW", "action": "Click chart mark → Scrub to time"},
+        {"from": "Markdown", "to": "Spatial", "action": "Click analysis entry → Highlight position"}
+      ]
+    },
+    "device_support_matrix": {
+      "boat_workstation": {
+        "primary_use": "Active creation & analysis",
+        "interaction": "Chatbot panel + IDE/DAW/Chart",
+        "markdown_editor": "Full",
+        "daw_timeline": "Full",
+        "spatial_chart": "TZ Pro + Injection",
+        "chatbot": "Full",
+        "viewers": "3 viewers as tabs (IDE, DAW, Chart)"
+      },
+      "tablet": {
+        "primary_use": "Mixed mode",
+        "interaction": "Touch + optional voice",
+        "markdown_editor": "Full",
+        "daw_timeline": "Limited",
+        "spatial_chart": "TZ Pro View Only",
+        "chatbot": "Full",
+        "viewers": "3 viewers as tabs (IDE, DAW, Chart)"
+      },
+      "phone": {
+        "primary_use": "Retrospective voice queries",
+        "interaction": "Two-way STT/TTS conversation (headset)",
+        "markdown_editor": "Auto-logged conversations",
+        "daw_timeline": "Voice description only",
+        "spatial_chart": "Voice description only",
+        "chatbot": "Voice-first with automatic knowledge capture",
+        "viewers": "None (voice-first interface)",
+        "knowledge_capture": "Conversations logged to Markdown with time/location anchors",
+        "search": "Similar questions find previously processed thoughts via time/space search"
+      },
+      "edge_device": {
+        "primary_use": "Headless data capture",
+        "interaction": "API-only",
+        "markdown_editor": "Headless Only",
+        "daw_timeline": "Headless Only",
+        "spatial_chart": "Headless Only",
+        "chatbot": "Headless Only",
+        "viewers": "None (headless)"
+      }
+    },
+    "phone_voice_interface": {
+      "architecture": "Voice-first retrospective query interface",
+      "primary_interaction": "Human asks questions about past data via voice",
+      "response": "Two-way STT/TTS conversation about historical patterns",
+      "knowledge_capture": {
+        "auto_logging": "Every conversation logged to Markdown",
+        "anchors": "Full time/location/source metadata",
+        "searchable": "Future queries find past answers"
+      },
+      "stt": {
+        "engine": "Whisper.cpp (local)",
+        "model": "base (~140MB) or small (~70MB)",
+        "latency_target_ms": 500,
+        "accuracy": "95%+ with marine vocabulary"
+      },
+      "tts": {
+        "engine": "Piper TTS (local)",
+        "voice": "vessel-en-us (trained on captain's voice ideally)",
+        "latency_target_ms": 200,
+        "quality": "Natural, conversational"
+      },
+      "conversation_flow": {
+        "wake_word": "Hey F/V EILEEN or Hey Captain",
+        "activation": "Hands-free, headset-optimized",
+        "context": "Always listening (local processing)"
+      },
+      "examples": [
+        {
+          "question": "How did we do here last Tuesday?",
+          "answer": "Last Tuesday July 15th, you caught 8 king salmon averaging 14.2 pounds between 8am and 2pm in Chatham Strait near Point Arden. Water temperature was 11.5°C, fish were at 35-40 fathoms. Success rate was 67% higher than your seasonal average."
+        },
+        {
+          "question": "What's the best tide for this spot?",
+          "answer": "Flood tide has 67% success rate at this location, ebb tide has 33%. Best time is 2 hours before high slack to 2 hours after."
+        }
+      ],
+      "search_capabilities": {
+        "semantic_similarity": "Find similar conversations by meaning",
+        "time_proximity": "Find conversations within time window",
+        "spatial_proximity": "Find conversations in same H3 cell",
+        "context_search": "Combined time + space + semantics"
+      }
+    }
+  },
+  "agent_ecosystem": {
+    "agent_types": {
+      "ingestion_agent": {
+        "purpose": "Real-time processing of raw data streams",
+        "responsibilities": [
+          "Subscribe to ZeroMQ acoustic tensor stream",
+          "Perform real-time classification",
+          "Detect anomalies",
+          "Publish to analysis bus"
+        ]
+      },
+      "analysis_agent": {
+        "purpose": "Pattern recognition and historical analysis",
+        "responsibilities": [
+          "Process accumulated acoustic data",
+          "Identify species-specific signatures",
+          "Generate biomass density maps",
+          "Create catch probability predictions"
+        ]
+      },
+      "supervisor_agent": {
+        "purpose": "Cross-sensor auto-labeling and continuous learning",
+        "responsibilities": [
+          "Monitor catch events and gear deployment",
+          "Auto-label acoustic data with ground truth",
+          "Trigger model retraining",
+          "Manage training data pool"
+        ]
+      },
+      "communication_agent": {
+        "purpose": "Crew feedback loop and voice reporting",
+        "responsibilities": [
+          "Process voice catch reports",
+          "Transcribe crew observations",
+          "Extract species/depth/bait information",
+          "Link transcripts to acoustic data"
+        ]
+      }
+    },
+    "communication_pattern": {
+      "protocol": "ZeroMQ pub/sub",
+      "topics": [
+        "acoustic_tensor",
+        "classification",
+        "catch_event",
+        "crew_report"
+      ]
+    }
+  },
+  "storage_architecture": {
+    "hive_partitioning": {
+      "structure": "/archive_root/year=/month=/day=/vessel_id/",
+      "example": "/archive_root/year=2026/month=07/day=24/vessel_id=US-AK-FVCATCHER-01/"
+    },
+    "parquet_schema": {
+      "name": "acoustic_v1_schema",
+      "alignment": "ICES SONAR-netCDF4 Convention",
+      "fields": [
+        {"name": "timestamp_ns", "type": "int64"},
+        {"name": "vessel_uuid", "type": "string"},
+        {"name": "ping_id", "type": "uint64"},
+        {"name": "frequency_hz", "type": "uint32"},
+        {"name": "transmit_power_watts", "type": "uint16"},
+        {"name": "pulse_length_ms", "type": "float32"},
+        {"name": "meters_per_bin", "type": "float32"},
+        {"name": "surface_temp_c", "type": "float32"},
+        {"name": "sound_velocity_mps", "type": "float32"},
+        {"name": "transducer_depth_m", "type": "float32"},
+        {"name": "latitude", "type": "float64"},
+        {"name": "longitude", "type": "float64"},
+        {"name": "heading_true", "type": "float32"},
+        {"name": "h3_index_uint64", "type": "uint64"},
+        {"name": "backscatter_tensor_db", "type": "list(float32)"},
+        {"name": "metadata_extension", "type": "map(string, string)"}
+      ]
+    },
+    "processing": {
+      "zero_copy": "Use memoryview for packet parsing",
+      "calibration": "Convert raw amplitude to Sv dB",
+      "normalization": "Hardware-agnostic physical units"
+    }
+  },
+  "implementation_roadmap": {
+    "phase_0": {
+      "name": "Data Capture Emergency",
+      "duration": "30 days",
+      "priority": "CRITICAL",
+      "rationale": "Every day of fishing is data we can never recreate",
+      "tasks": {
+        "task_0_1": {
+          "name": "Robust Network Packet Capture",
+          "week": 1,
+          "focus": "Lossless UDP packet capture",
+          "success": "Zero packet loss at 15Hz ping rate"
+        },
+        "task_0_2": {
+          "name": "NMEA Interpolation Engine",
+          "week": 1,
+          "focus": "Sub-second GPS position for each sounder ping",
+          "success": "<5m position error at 10 knots"
+        },
+        "task_0_3": {
+          "name": "Parquet Storage Pipeline",
+          "week": 2,
+          "focus": "Future-proof data storage",
+          "success": "ICES-aligned format, <1s query performance"
+        },
+        "task_0_4": {
+          "name": "Validation and Monitoring",
+          "week": "2-3",
+          "focus": "Confidence in data quality",
+          "success": "Daily health report automated"
+        },
+        "task_0_5": {
+          "name": "Integration with TZ Pro",
+          "week": "3-4",
+          "focus": "Non-disruptive integration",
+          "success": "Zero interference with TZ Pro operation"
+        }
+      }
+    },
+    "phase_1": {
+      "name": "Foundation Hardening",
+      "duration": "3 months",
+      "priority": "HIGH",
+      "focus": "Level 1 - Physical Tensors",
+      "tasks": {
+        "task_1_1": "Physical Normalization Implementation",
+        "task_1_2": "H3 Spatial Indexing",
+        "task_1_3": "Metadata Extension Blocks"
+      }
+    },
+    "phase_2": {
+      "name": "Analysis Foundation",
+      "duration": "3 months",
+      "priority": "HIGH",
+      "focus": "Level 2 - Analytical Features",
+      "tasks": {
+        "task_2_1": "Biomass Detection",
+        "task_2_2": "Bottom Classification",
+        "task_2_3": "Catch Event Integration"
+      }
+    },
+    "phase_3": {
+      "name": "Multi-Viewer Interface + Chatbot",
+      "duration": "6 months",
+      "priority": "MEDIUM",
+      "focus": "Visualization and Interaction",
+      "tasks": {
+        "task_3_1": "Theia-based Markdown/Code Editor (Primary MVP)",
+        "task_3_2": "TZ Pro Injection API (Spatial marks/objects)",
+        "task_3_3": "Basic DAW Timeline (File timestamp-based)",
+        "task_3_4": "Collapsible Chatbot Panel (Context-aware)",
+        "task_3_5": "Cross-Viewer Event Linking",
+        "task_3_6": "Headless OpenCPN Integration (Agent spatial awareness)",
+        "task_3_7": "Full DAW Timeline (Multi-track, scrubbing)",
+        "task_3_8": "Advanced Cross-Viewer Correlations"
+      }
+    }
+  },
+  "success_metrics": {
+    "level_0": {
+      "data_quality": {
+        "capture_rate": ">99.9%",
+        "storage_efficiency": "<2GB/hour",
+        "query_performance": "<1s for any day",
+        "uptime": ">99% during operations"
+      },
+      "system_health": {
+        "packet_loss": "<0.1%",
+        "disk_usage": "predictable growth",
+        "auto_purge": "prevents overflow",
+        "error_recovery": "automatic"
+      }
+    },
+    "level_1": {
+      "normalization_accuracy": {
+        "position_error": "<5m at 10 knots",
+        "depth_precision": "<0.5m",
+        "sv_calibration": "<1dB variance",
+        "h3_indexing": "100% coverage"
+      },
+      "schema_compliance": {
+        "ices_alignment": "100% compliant",
+        "hardware_agnostic": "validated on 2+ sounders",
+        "extension_blocks": "functional",
+        "backward_compatibility": "maintained"
+      }
+    },
+    "level_2": {
+      "classification_accuracy": {
+        "species_id": ">70% for 3 species",
+        "biomass_detection": ">80% precision",
+        "bottom_classification": ">85% accuracy",
+        "thermocline_detection": "<2m precision"
+      },
+      "pattern_discovery": {
+        "signatures_library": "100+ patterns",
+        "temporal_patterns": "diel cycles detected",
+        "spatial_clusters": "validated",
+        "correlations": "identified"
+      }
+    },
+    "level_3": {
+      "prediction_quality": {
+        "catch_probability": ">60% accuracy at 24h",
+        "gear_optimization": ">15% CPUE improvement",
+        "route_recommendations": "adopted >50%",
+        "real_time_alerts": "<1 minute latency"
+      },
+      "fleet_intelligence": {
+        "vessels_participating": "5+",
+        "shared_vocabulary": "10,000+ signatures",
+        "federated_learning": ">10% improvement",
+        "collaborative_models": "operational"
+      }
+    },
+    "level_4": {
+      "stock_assessment": {
+        "biomass_estimate": "within 20% of surveys",
+        "recruitment_prediction": "validated",
+        "harvest_strategy": "accepted by regulators",
+        "ecosystem_trends": "leading indicators"
+      },
+      "scientific_impact": {
+        "publications": "3+ peer-reviewed",
+        "data_contributions": "accepted by agencies",
+        "open_tools": "50+ vessel adoption",
+        "community": "active ecosystem"
+      }
+    }
+  },
+  "risk_mitigation": {
+    "technical_risks": {
+      "hardware_failure": {
+        "mitigations": [
+          "Redundant capture systems",
+          "Automated validation alerts",
+          "Graceful degradation"
+        ]
+      },
+      "data_corruption": {
+        "mitigations": [
+          "Schema validation at write",
+          "Parquet footer checksums",
+          "Daily backup verification"
+        ]
+      },
+      "model_degradation": {
+        "mitigations": [
+          "Continuous validation",
+          "Rollback capability",
+          "Ensemble methods"
+        ]
+      }
+    },
+    "operational_risks": {
+      "captain_rejection": {
+        "mitigations": [
+          "Non-disruptive integration",
+          "Clear value demonstration",
+          "Manual override always available"
+        ]
+      },
+      "regulatory_constraints": {
+        "mitigations": [
+          "Privacy-preserving design",
+          "Voluntary data sharing",
+          "Agency collaboration early"
+        ]
+      },
+      "fleet_adoption": {
+        "mitigations": [
+          "Open-source tools",
+          "Clear value proposition",
+          "Easy onboarding"
+        ]
+      }
+    },
+    "environmental_risks": {
+      "changing_ecosystem": {
+        "mitigations": [
+          "Adaptive models",
+          "Multi-species focus",
+          "Climate indicators"
+        ]
+      },
+      "data_gaps": {
+        "mitigations": [
+          "Robust capture during season",
+          "Interpolation where appropriate",
+          "Uncertainty quantification"
+        ]
+      }
+    }
+  },
+  "critical_principles": {
+    "data_capture": "Capture now, analyze later - raw data is priority",
+    "hardware_agnostic": "Normalize to physical units - decouple from specific devices",
+    "triply_anchored": "Time/Location/Source on every record",
+    "future_proof": "Schema extensibility blocks for unknown future needs",
+    "agent_first": "Structure data for AI consumption, not human visual inspection",
+    "bmad_methodology": "Bottom-up development, Multi-level architecture, Agile iteration",
+    "non_renewable_resource": "Acoustic signatures of 2026 cannot be recreated in 2031",
+    "every_day_counts": "Each fishing day produces training data for 5-year models"
+  },
+  "agent_continuity": {
+    "memory_update_protocol": [
+      "Read this schema first when new agent session begins",
+      "Review reference documents for deep-dive topics",
+      "Check implementation status against roadmap",
+      "Update this schema when architectural decisions are made",
+      "Add timestamp and rationale for all changes"
+    ],
+    "compression_strategy": {
+      "immutable": "Core schema definitions are permanent",
+      "stable": "Architecture overview is long-term reference",
+      "updated": "Implementation roadmap status changes regularly",
+      "ephemeral": "Agent-specific context is short-term"
+    }
+  },
+  "reference_documents": {
+    "internal": [
+      "vessel_agent_knowledge_base.md",
+      "marine_visualization_design_doc.md",
+      "marine_vessel_agent_system_analysis.md",
+      "tzrawcapturesystem1.md",
+      "vessel_agent_5year_vision.md",
+      "vessel_agent_ux_refinement.md",
+      "phone_voice_first_ux.md",
+      "vessel_agent_multimodal_ingestion.md",
+      "edge_device_io_architecture.md"
+    ],
+    "external": [
+      "ICES SONAR-netCDF4 Convention",
+      "Apache Parquet Specification",
+      "Uber H3 Spatial Index",
+      "TimeZero Professional Integration"
+    ]
+  },
+  "quick_reference": {
+    "data_flow": "Sounder UDP → Ring Buffer → Zero-Copy Parser → Parquet Writer → Disk",
+    "key_technologies": [
+      "Python + pypcap + memoryview (capture)",
+      "Apache Arrow + Parquet + DuckDB (storage)",
+      "Uber H3 + ICES normalization (spatial)",
+      "React + WebGL + D3.js (visualization)",
+      "PyTorch + ZeroMQ (agents)"
+    ],
+    "critical_commands": {
+      "start_capture": "python capture_daemon.py run",
+      "check_status": "python capture_daemon.py status",
+      "validate_data": "python capture_daemon.py doctor",
+      "query_acoustic": "SELECT * FROM read_parquet('archive_root/...') WHERE h3_index_uint64 = ..."
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(find:*)",
+      "WebFetch(domain:gpsd.gitlab.io)",
+      "WebFetch(domain:aprs.gids.nl)",
+      "Bash(cargo test:*)",
+      "Bash(git init:*)",
+      "Bash(git config:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit: Vessel Agent System documentation\n\nComplete vessel intelligence operating system architecture for \ncommercial fishing vessels (F/V EILEEN, Southeast Alaska).\n\nCore architecture:\n- BMAD methodology (Bottom-up, Multi-level, Agile Development)\n- 5 abstraction levels from raw bits to strategic knowledge\n- 3-viewer interface (Markdown IDE, DAW Timeline, Spatial Chart)\n- Multi-modal data ingestion (phone, laptop, edge devices)\n- Time/Location/Source anchoring for all data\n\nDocumentation:\n- README.md (entry point and quick start)\n- vessel_agent_memory_schema.json (complete system schema)\n- vessel_agent_knowledge_base.md (technical knowledge base)\n- vessel_agent_5year_vision.md (5-year BMAD roadmap)\n- vessel_agent_vision_synthesis.md (creative vision narrative)\n- vessel_agent_ux_refinement.md (3-viewer architecture)\n- phone_voice_first_ux.md (voice-first retrospective queries)\n- vessel_agent_multimodal_ingestion.md (multi-modal data ingestion)\n- edge_device_io_architecture.md (edge device IO and DAW tracks)\n- theia_mvp_specification.md (Theia IDE implementation)\n- vessel_agent_research_synthesis.md (GitHub research)\n- marine_visualization_design_doc.md (multi-panel UI design)\n- marine_vessel_agent_system_analysis.md (technical analysis)\n- nmea_integration_analysis.md (NMEA integration patterns)\n- nmea_implementation_guide.md (NMEA implementation)\n- phase0_implementation_plan.md (Phase 0 implementation)\n- phase0_quick_start.md (Phase 0 quick start)\n\nPrinciples:\n- Capture now, analyze later (non-renewable resource principle)\n- Everything that matters in time is logged and searchable\n- Phone: Voice reports, photos, videos, fleet intelligence\n- Laptop: Weather, tides, market, API streams\n- Edge devices: Physical IO, sensors, cameras → DAW tracks\n- Front View: Runtime dashboard (gauges + videos + controllers)\n\nStatus: Phase 0 (Data Capture Emergency) - Foundation complete, \nimplementation in progress\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)",
+      "Bash(gh repo create:*)",
+      "Bash(git push:*)",
+      "Bash(wc:*)",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)",
+      "Bash(git checkout:*)",
+      "Bash(git rebase:*)",
+      "Bash(git reset:*)",
+      "Bash(git clean:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(powershell:*)",
+      "Bash(pip install:*)",
+      "Bash(gh repo view:*)",
+      "Bash(git rm:*)"
+    ]
+  }
+}
