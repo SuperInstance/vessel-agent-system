@@ -7,7 +7,8 @@ process that:
 2. fuses depth soundings into the progressive bathymetry grid,
 3. serves viewer WebSocket clients and broadcasts a VesselStateSnapshot
    every ``broadcast_interval`` seconds,
-4. persists the bathymetry grid every ``persist_interval`` seconds.
+4. persists the bathymetry grid every ``persist_interval`` seconds,
+5. logs all telemetry packets to a JSONL file for analytics.
 """
 
 from __future__ import annotations
@@ -47,29 +48,108 @@ class TwinCore:
         viewer_port: int = 8090,
         vessel_id: str = "US-AK-FVEILEEN-51",
         bathymetry_path: str | Path = "bathymetry.json",
+        telemetry_log_path: str | Path = "telemetry.jsonl",
         broadcast_interval: float = 1.0,
         persist_interval: float = 60.0,
         viewport_radius_m: float = 500.0,
+        enable_telemetry_log: bool = True,
     ) -> None:
-        """Configure the twin; nothing connects until :meth:`run` is awaited."""
+        """Configure the twin; nothing connects until :meth:`run` is awaited.
+
+        Args:
+            bridge_url: WebSocket URL of the bridge server.
+            viewer_port: Port for the viewer WebSocket server.
+            vessel_id: Identifier for this vessel.
+            bathymetry_path: Path to bathymetry persistence file.
+            telemetry_log_path: Path to telemetry JSONL log file.
+            broadcast_interval: Seconds between viewer snapshot broadcasts.
+            persist_interval: Seconds between bathymetry persistence writes.
+            viewport_radius_m: Radius of bathymetry viewport in meters.
+            enable_telemetry_log: Whether to log telemetry packets to JSONL.
+        """
         self.bridge_url = bridge_url
         self.viewer_port = viewer_port
         self.vessel_id = vessel_id
         self.bathymetry_path = Path(bathymetry_path)
+        self.telemetry_log_path = Path(telemetry_log_path)
         self.broadcast_interval = broadcast_interval
         self.persist_interval = persist_interval
         self.viewport_radius_m = viewport_radius_m
+        self.enable_telemetry_log = enable_telemetry_log
 
         self.state = VesselState()
         self.bathymetry = BathymetryGrid()
         self._viewers: set[Any] = set()
+        self._telemetry_log_file: Any | None = None
+
+    # ------------------------------------------------------------------ #
+    # Telemetry logging
+    # ------------------------------------------------------------------ #
+    def _open_telemetry_log(self) -> None:
+        """Open the telemetry log file for appending."""
+        if not self.enable_telemetry_log:
+            return
+
+        try:
+            # Create parent directory if it doesn't exist
+            self.telemetry_log_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Open file in append mode
+            self._telemetry_log_file = open(
+                self.telemetry_log_path,
+                mode="a",
+                encoding="utf-8",
+                buffering=1,  # Line buffering
+            )
+            log.info("telemetry log opened: %s", self.telemetry_log_path)
+        except OSError as exc:
+            log.error("failed to open telemetry log: %s", exc)
+            self._telemetry_log_file = None
+
+    def _close_telemetry_log(self) -> None:
+        """Close the telemetry log file."""
+        if self._telemetry_log_file is not None:
+            try:
+                self._telemetry_log_file.close()
+                log.info("telemetry log closed")
+            except OSError as exc:
+                log.error("error closing telemetry log: %s", exc)
+            finally:
+                self._telemetry_log_file = None
+
+    def _log_telemetry(self, packet: dict[str, Any]) -> None:
+        """Write a telemetry packet to the JSONL log.
+
+        Args:
+            packet: TelemetryPacket dict to log.
+        """
+        if not self.enable_telemetry_log or self._telemetry_log_file is None:
+            return
+
+        try:
+            self._telemetry_log_file.write(json.dumps(packet) + "\n")
+        except (OSError, TypeError) as exc:
+            log.warning("failed to write telemetry packet: %s", exc)
 
     # ------------------------------------------------------------------ #
     # Packet handling
     # ------------------------------------------------------------------ #
     def handle_packet(self, packet: dict[str, Any]) -> None:
-        """Apply one TelemetryPacket to state and, if a sounding, the grid."""
+        """Apply one TelemetryPacket to state and, if a sounding, the grid.
+
+        Logs the packet to the telemetry JSONL file if logging is enabled.
+
+        Args:
+            packet: TelemetryPacket dict with timestamp_ns, source, channel,
+                    value, and optional quality fields.
+        """
+        # Log packet to telemetry file
+        self._log_telemetry(packet)
+
+        # Apply to vessel state
         self.state.apply_packet(packet)
+
+        # Fuse depth soundings into bathymetry grid
         if packet.get("channel") != DEPTH_CHANNEL:
             return
         value = packet.get("value")
@@ -182,12 +262,22 @@ class TwinCore:
     # Entry point
     # ------------------------------------------------------------------ #
     async def run(self) -> None:
-        """Load persisted state, then run all loops until cancelled."""
+        """Load persisted state, then run all loops until cancelled.
+
+        Opens telemetry log file on startup and closes on shutdown.
+        """
         self.bathymetry.load(self.bathymetry_path)
-        async with websockets.serve(self._viewer_handler, "localhost", self.viewer_port):
-            log.info("viewer WS server listening on port %d", self.viewer_port)
-            await asyncio.gather(
-                self._bridge_loop(),
-                self._broadcast_loop(),
-                self._persist_loop(),
-            )
+        self._open_telemetry_log()
+
+        try:
+            async with websockets.serve(
+                self._viewer_handler, "localhost", self.viewer_port
+            ):
+                log.info("viewer WS server listening on port %d", self.viewer_port)
+                await asyncio.gather(
+                    self._bridge_loop(),
+                    self._broadcast_loop(),
+                    self._persist_loop(),
+                )
+        finally:
+            self._close_telemetry_log()
