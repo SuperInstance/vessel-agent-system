@@ -26,6 +26,16 @@ const el = {
   voxelCount: $('voxel-count'),
   sessionTime: $('session-time'),
   position: $('position'),
+  // Alert elements
+  alertsList: $('alerts-list'),
+  alertsHistoryList: $('alerts-history-list'),
+  clearAllAlerts: $('clear-all-alerts'),
+  actionDialog: $('action-dialog'),
+  dialogTitle: $('dialog-title'),
+  dialogMessage: $('dialog-message'),
+  dialogPayload: $('dialog-payload'),
+  dialogConfirm: $('dialog-confirm'),
+  dialogCancel: $('dialog-cancel'),
 };
 
 // ---------------------------------------------------------------- renderer / scene
@@ -134,6 +144,267 @@ const C_SHALLOW = new THREE.Color(0xff9a3c);   // < 30 m  warm orange
 const C_MID     = new THREE.Color(0x3fd68c);   // 30–80 m green
 const C_DEEP    = new THREE.Color(0x2f6fd0);   // > 80 m  blue
 
+// ---------------------------------------------------------------- Alert system
+const activeAlerts = new Map();  // alert_id -> alert data
+const alertHistory = [];
+const MAX_HISTORY = 20;
+let alertIdCounter = 0;
+
+// 3D Alert indicators
+const alertMarkers = new Map();  // alert_id -> THREE.Group
+const alertLabels = new Map();   // alert_id -> DOM element
+
+function getPriorityLevel(priority) {
+  if (priority >= 0.9) return 'critical';
+  if (priority >= 0.7) return 'high';
+  if (priority >= 0.4) return 'medium';
+  return 'low';
+}
+
+function getPriorityColor(priority) {
+  if (priority >= 0.9) return 0xe04b4b;  // red
+  if (priority >= 0.7) return 0xe0b13c;  // yellow
+  if (priority >= 0.4) return 0x35e08a; // green
+  return 0x6f93b3;                       // blue
+}
+
+function formatTimestamp(ns) {
+  const s = Math.floor(ns / 1e9);
+  const date = new Date(s * 1000);
+  return date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function addAlert(action) {
+  const alertId = `alert-${++alertIdCounter}`;
+  const alert = {
+    id: alertId,
+    action: action.action,
+    payload: action.payload || {},
+    reason: action.reason || '',
+    priority: action.priority || 0.5,
+    rule_id: action.rule_id || 'unknown',
+    timestamp_ns: action.timestamp_ns || BigInt(Date.now() * 1e6),
+    created_at: Date.now(),
+  };
+
+  activeAlerts.set(alertId, alert);
+  renderAlert(alert);
+  add3DAlertIndicator(alert);
+
+  // Also add to history
+  addToHistory(alert);
+}
+
+function renderAlert(alert) {
+  const item = document.createElement('div');
+  item.className = `alert-item priority-${getPriorityLevel(alert.priority)}`;
+  item.id = alert.id;
+  item.style.setProperty('--priority-percent', `${alert.priority * 100}%`);
+
+  const severity = alert.payload?.severity || 'WARNING';
+  const code = alert.payload?.code || 'ALERT';
+  const message = alert.payload?.message || alert.reason || alert.action;
+
+  item.innerHTML = `
+    <button class="btn-dismiss-alert" onclick="dismissAlert('${alert.id}')">✕</button>
+    <div class="alert-header">
+      <span class="alert-code">${code}</span>
+      <span class="alert-time">${formatTimestamp(alert.timestamp_ns)}</span>
+    </div>
+    <div class="alert-message">${message}</div>
+    <div class="alert-reason">${alert.reason}</div>
+    <div class="alert-priority-bar"></div>
+  `;
+
+  el.alertsList.appendChild(item);
+}
+
+function dismissAlert(alertId) {
+  const alert = activeAlerts.get(alertId);
+  if (!alert) return;
+
+  // Remove from UI
+  const item = document.getElementById(alertId);
+  if (item) item.remove();
+
+  // Remove 3D indicator
+  remove3DAlertIndicator(alertId);
+
+  // Remove from active alerts
+  activeAlerts.delete(alertId);
+}
+
+function clearAllAlerts() {
+  for (const alertId of activeAlerts.keys()) {
+    dismissAlert(alertId);
+  }
+}
+
+function addToHistory(alert) {
+  alertHistory.unshift(alert);
+  if (alertHistory.length > MAX_HISTORY) {
+    alertHistory.pop();
+  }
+  renderHistory();
+}
+
+function renderHistory() {
+  el.alertsHistoryList.innerHTML = '';
+
+  if (alertHistory.length === 0) {
+    el.alertsHistoryList.innerHTML = '<div class="empty-state">No alert history</div>';
+    return;
+  }
+
+  for (const alert of alertHistory) {
+    const item = document.createElement('div');
+    item.className = `history-item ${getPriorityLevel(alert.priority)}`;
+    const code = alert.payload?.code || 'ALERT';
+    item.textContent = `${formatTimestamp(alert.timestamp_ns)} - ${code}`;
+    el.alertsHistoryList.appendChild(item);
+  }
+}
+
+// ---------------------------------------------------------------- 3D Alert Indicators
+function add3DAlertIndicator(alert) {
+  const priority = alert.priority || 0.5;
+  const isCritical = priority >= 0.9;
+
+  // Create a marker group at vessel position
+  const marker = new THREE.Group();
+  marker.position.copy(vessel.position);
+  marker.position.y += 5; // Float above vessel
+
+  // Create a glowing sphere for critical alerts
+  if (isCritical) {
+    const sphereGeo = new THREE.SphereGeometry(1.5, 16, 16);
+    const sphereMat = new THREE.MeshBasicMaterial({
+      color: getPriorityColor(priority),
+      transparent: true,
+      opacity: 0.6,
+    });
+    const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+    marker.add(sphere);
+
+    // Add pulsing animation data
+    marker.userData.pulse = true;
+    marker.userData.pulsePhase = 0;
+  }
+
+  // Create a ring for non-critical alerts
+  if (!isCritical) {
+    const ringGeo = new THREE.RingGeometry(1.8, 2.2, 32);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: getPriorityColor(priority),
+      transparent: true,
+      opacity: 0.8,
+      side: THREE.DoubleSide,
+    });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    marker.add(ring);
+  }
+
+  scene.add(marker);
+  alertMarkers.set(alert.id, marker);
+
+  // Create floating label
+  if (isCritical) {
+    const label = document.createElement('div');
+    label.className = 'alert-marker';
+    label.innerHTML = `<div class="alert-label">${alert.payload?.code || 'ALERT'}</div>`;
+    el.container.appendChild(label);
+    alertLabels.set(alert.id, label);
+  }
+}
+
+function remove3DAlertIndicator(alertId) {
+  const marker = alertMarkers.get(alertId);
+  if (marker) {
+    scene.remove(marker);
+    alertMarkers.delete(alertId);
+  }
+
+  const label = alertLabels.get(alertId);
+  if (label) {
+    label.remove();
+    alertLabels.delete(alertId);
+  }
+}
+
+function updateAlertIndicators() {
+  // Move markers with vessel
+  for (const [alertId, marker] of alertMarkers) {
+    marker.position.x = vessel.position.x;
+    marker.position.z = vessel.position.z;
+    marker.position.y = vessel.position.y + 5;
+
+    // Pulsing animation for critical alerts
+    if (marker.userData.pulse) {
+      marker.userData.pulsePhase += 0.05;
+      const scale = 1 + Math.sin(marker.userData.pulsePhase) * 0.3;
+      marker.scale.set(scale, scale, scale);
+    }
+  }
+
+  // Update label positions
+  for (const [alertId, label] of alertLabels) {
+    const marker = alertMarkers.get(alertId);
+    if (!marker) continue;
+
+    // Project 3D position to 2D screen
+    const pos = marker.position.clone();
+    pos.y += 3;
+    pos.project(camera);
+
+    const x = (pos.x * 0.5 + 0.5) * el.container.clientWidth;
+    const y = (pos.y * -0.5 + 0.5) * el.container.clientHeight;
+
+    // Hide if behind camera or too far
+    if (pos.z > 1) {
+      label.style.display = 'none';
+    } else {
+      label.style.display = 'block';
+      label.style.transform = `translate(${x}px, ${y}px)`;
+    }
+  }
+}
+
+// ---------------------------------------------------------------- Action handling
+let pendingAction = null;
+
+function showActionDialog(actionName, message = 'Are you sure?', payload = null) {
+  pendingAction = { action: actionName, payload };
+
+  el.dialogTitle.textContent = `Confirm ${actionName.replace(/_/g, ' ').toUpperCase()}`;
+  el.dialogMessage.textContent = message;
+  el.dialogPayload.textContent = payload ? JSON.stringify(payload, null, 2) : '';
+  el.actionDialog.classList.remove('hidden');
+}
+
+function hideActionDialog() {
+  el.actionDialog.classList.add('hidden');
+  pendingAction = null;
+}
+
+function executeAction(action, payload = {}) {
+  const actionMsg = {
+    type: 'action_request',
+    data: {
+      action,
+      payload,
+      timestamp_ns: BigInt(Date.now() * 1e6),
+    },
+  };
+
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(actionMsg));
+    console.log('[action] Sent:', actionMsg);
+  } else {
+    console.warn('[action] Cannot send action - WebSocket not connected');
+  }
+}
+
 function addBathyCell(x, depth, z, confidence) {
   if (bathyCount >= BATHY_MAX) return;
   const c = depth < 30 ? C_SHALLOW : depth <= 80 ? C_MID : C_DEEP;
@@ -235,6 +506,53 @@ setInterval(() => { el.sessionTime.textContent = fmtDuration(Date.now() - sessio
 // ---------------------------------------------------------------- snapshot handling
 let cameraLocked = false;
 
+// ---------------------------------------------------------------- Action event handler
+function handleActionEvent(action) {
+  console.log('[action] Received:', action);
+
+  if (action.action === 'raise_alert') {
+    addAlert(action);
+  } else if (action.action === 'clear_alerts') {
+    clearAllAlerts();
+  } else {
+    // For other actions, show a notification
+    console.log('[action] Non-alert action:', action);
+  }
+}
+
+// ---------------------------------------------------------------- Event listeners
+el.clearAllAlerts?.addEventListener('click', clearAllAlerts);
+
+el.dialogConfirm?.addEventListener('click', () => {
+  if (pendingAction) {
+    executeAction(pendingAction.action, pendingAction.payload || {});
+    hideActionDialog();
+  }
+});
+
+el.dialogCancel?.addEventListener('click', hideActionDialog);
+
+// Quick action buttons
+document.querySelectorAll('.action-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    const action = e.target.dataset.action;
+    if (!action) return;
+
+    // Show confirmation dialog
+    const messages = {
+      'haul_gear': 'Haul gear now? This will retrieve all deployed gear.',
+      'anchor_drop': 'Drop anchor now? This will stop the vessel.',
+      'clear_alerts': 'Clear all active alerts?',
+    };
+
+    showActionDialog(action, messages[action] || 'Execute this action?');
+  });
+});
+
+// Make functions globally available for onclick handlers
+window.dismissAlert = dismissAlert;
+window.clearAllAlerts = clearAllAlerts;
+
 function onSnapshot(msg) {
   const { pose, bathymetry } = msg;
   if (!pose) return;
@@ -292,9 +610,18 @@ function connect() {
 
   ws.onmessage = (event) => {
     try {
-      onSnapshot(JSON.parse(event.data));
+      const msg = JSON.parse(event.data);
+
+      // Handle action events from WatcherRegistry
+      if (msg.type === 'action') {
+        handleActionEvent(msg.data);
+        return;
+      }
+
+      // Handle regular snapshots
+      onSnapshot(msg);
     } catch (err) {
-      console.warn('bad snapshot ignored:', err);
+      console.warn('bad message ignored:', err);
     }
   };
 
@@ -323,5 +650,6 @@ resize();
 renderer.setAnimationLoop(() => {
   controls.autoRotate = performance.now() - lastInputAt > 5000;
   controls.update();
+  updateAlertIndicators();
   renderer.render(scene, camera);
 });

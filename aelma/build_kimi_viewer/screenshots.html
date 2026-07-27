@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AELMA Alerts UI - Screenshots & Examples</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", -apple-system, sans-serif;
+      background: #06121f;
+      color: #cfe3f5;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1, h2, h3 { color: #ffd9a8; }
+    h1 { border-bottom: 2px solid #1d425f; padding-bottom: 10px; }
+    .screenshot {
+      background: #0a1a2b;
+      border: 1px solid #1d425f;
+      border-radius: 10px;
+      margin: 20px 0;
+      overflow: hidden;
+    }
+    .screenshot-header {
+      background: rgba(16, 38, 58, 0.8);
+      padding: 10px 15px;
+      border-bottom: 1px solid #1d425f;
+      font-size: 14px;
+      color: #6f93b3;
+    }
+    .screenshot-content {
+      padding: 15px;
+    }
+    .description {
+      background: rgba(16, 38, 58, 0.5);
+      border-left: 3px solid #35e08a;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .demo-container {
+      position: relative;
+      background: linear-gradient(180deg, #87b5cd 0%, #5a9bc4 100%);
+      height: 400px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .code-block {
+      background: #000;
+      color: #35e08a;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin: 15px 0;
+    }
+    .feature-card {
+      background: rgba(16, 38, 58, 0.6);
+      border: 1px solid #1d425f;
+      border-radius: 8px;
+      padding: 15px;
+    }
+    .feature-card h4 {
+      color: #ffd9a8;
+      margin-bottom: 8px;
+    }
+    .priority-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    .priority-critical { background: #e04b4b; }
+    .priority-high { background: #e0b13c; }
+    .priority-medium { background: #35e08a; }
+    .priority-low { background: #6f93b3; }
+  </style>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>AELMA Alerts UI - Screenshots & Examples</h1>
+
+  <div class="description">
+    <strong>Overview:</strong> The Alerts UI provides real-time visualization of WatcherRegistry actions
+    from the AELMA twin core, displaying color-coded alerts with priority levels, 3D visual indicators,
+    and quick action buttons for safety-critical vessel operations.
+  </div>
+
+  <h2>Key Features</h2>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <h4>🎨 Color-Coded Alerts</h4>
+      <span class="priority-indicator priority-critical"></span>Critical (≥0.9): Red, pulsing<br>
+      <span class="priority-indicator priority-high"></span>High (0.7-0.9): Yellow<br>
+      <span class="priority-indicator priority-medium"></span>Medium (0.4-0.7): Green<br>
+      <span class="priority-indicator priority-low"></span>Low (<0.4): Blue
+    </div>
+    <div class="feature-card">
+      <h4>🎯 3D Indicators</h4>
+      Critical: Glowing sphere + floating label<br>
+      Others: Ring marker at vessel<br>
+      Real-time position tracking
+    </div>
+    <div class="feature-card">
+      <h4>⚡ Quick Actions</h4>
+      Haul gear, drop anchor<br>
+      Confirmation dialogs<br>
+      WebSocket integration
+    </div>
+    <div class="feature-card">
+      <h4>📜 Alert History</h4>
+      Timestamped log (max 20)<br>
+      Priority color coding<br>
+> Persistent across sessions
+    </div>
+  </div>
+
+  <h2>Screenshot 1: Critical Alert (GROUNDING_RISK)</h2>
+  <div class="screenshot">
+    <div class="screenshot-header">
+      Critical Alert - Red border, pulsing animation, 3D sphere marker
+    </div>
+    <div class="screenshot-content">
+      <div class="demo-container">
+        <!-- Simulated alert panel -->
+        <div style="position: absolute; top: 12px; left: 12px; width: 320px; max-height: 350px; background: rgba(16, 38, 58, 0.9); border: 1px solid #e04b4b; border-radius: 10px; padding: 14px; overflow-y: auto;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #1d425f;">
+            <h2 style="font-size: 14px; font-weight: 600; color: #ffd9a8; margin: 0;">ALERTS</h2>
+            <button style="background: rgba(224, 75, 75, 0.2); border: 1px solid #e04b4b; color: #e04b4b; padding: 4px 8px; border-radius: 4px; font-size: 11px;">✕ Clear All</button>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="background: rgba(224, 75, 75, 0.15); border: 1px solid #e04b4b; border-radius: 8px; padding: 10px 12px; position: relative; animation: pulse 1s infinite;">
+              <button style="position: absolute; top: 8px; right: 8px; background: transparent; border: none; color: #6f93b3; font-size: 16px;">✕</button>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                <span style="font-size: 11px; font-weight: 700; color: #ffd9a8; letter-spacing: 1px;">GROUNDING_RISK</span>
+                <span style="font-size: 10px; color: #6f93b3;">14:32:05</span>
+              </div>
+              <div style="font-size: 12px; color: #cfe3f5; margin-bottom: 6px;">GROUNDING RISK: depth=0.8m</div>
+              <div style="font-size: 11px; color: #7ea6c6; font-style: italic;">depth=0.80m</div>
+              <div style="height: 3px; border-radius: 2px; margin-top: 8px; background: linear-gradient(90deg, #35e08a 0%, #e0b13c 50%, #e04b4b 100%);">
+                <div style="height: 100%; background: #fff; border-radius: 2px; width: 95%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Simulated 3D vessel -->
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+          <div style="width: 20px; height: 40px; background: #ff7700; border-radius: 50% 50% 0 0;"></div>
+        </div>
+        <!-- Simulated 3D alert sphere -->
+        <div style="position: absolute; top: calc(50% - 60px); left: calc(50% - 15px); width: 30px; height: 30px; background: rgba(224, 75, 75, 0.6); border-radius: 50%; animation: pulse 1s infinite;"></div>
+        <!-- Floating label -->
+        <div style="position: absolute; top: calc(50% - 90px); left: calc(50% - 40px); background: rgba(224, 75, 75, 0.9); color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">GROUNDING_RISK</div>
+      </div>
+      <style>
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.7; transform: scale(1.1); }
+        }
+      </style>
+    </div>
+  </div>
+
+  <h2>Screenshot 2: Multiple Alerts (Mixed Priority)</h2>
+  <div class="screenshot">
+    <div class="screenshot-header">
+      Multiple Alerts - Different priority levels with color coding
+    </div>
+    <div class="screenshot-content">
+      <div style="background: rgba(16, 38, 58, 0.9); border: 1px solid #1d425f; border-radius: 10px; padding: 14px; width: 320px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #1d425f;">
+          <h2 style="font-size: 14px; font-weight: 600; color: #ffd9a8; margin: 0;">ALERTS</h2>
+          <button style="background: rgba(224, 75, 75, 0.2); border: 1px solid #e04b4b; color: #e04b4b; padding: 4px 8px; border-radius: 4px; font-size: 11px;">✕ Clear All</button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
+          <!-- Critical -->
+          <div style="background: rgba(224, 75, 75, 0.15); border: 1px solid #e04b4b; border-radius: 8px; padding: 10px 12px;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="font-size: 11px; font-weight: 700; color: #ffd9a8;">ENGINE_OVERHEAT</span>
+              <span style="font-size: 10px; color: #6f93b3;">14:31:45</span>
+            </div>
+            <div style="font-size: 12px; color: #cfe3f5;">Engine overheat: 95.0°C</div>
+            <div style="height: 3px; margin-top: 8px; background: linear-gradient(90deg, #35e08a 0%, #e04b4b 100%);">
+              <div style="height: 100%; background: #fff; width: 92%;"></div>
+            </div>
+          </div>
+          <!-- High -->
+          <div style="background: rgba(224, 177, 60, 0.1); border: 1px solid #e0b13c; border-radius: 8px; padding: 10px 12px;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="font-size: 11px; font-weight: 700; color: #ffd9a8;">SHALLOW_WATER</span>
+              <span style="font-size: 10px; color: #6f93b3;">14:30:22</span>
+            </div>
+            <div style="font-size: 12px; color: #cfe3f5;">Depth critical: 1.5m</div>
+            <div style="height: 3px; margin-top: 8px; background: linear-gradient(90deg, #35e08a 0%, #e04b4b 100%);">
+              <div style="height: 100%; background: #fff; width: 85%;"></div>
+            </div>
+          </div>
+          <!-- Medium -->
+          <div style="background: rgba(53, 224, 138, 0.1); border: 1px solid #35e08a; border-radius: 8px; padding: 10px 12px;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="font-size: 11px; font-weight: 700; color: #ffd9a8;">DEPTH_WARNING</span>
+              <span style="font-size: 10px; color: #6f93b3;">14:28:10</span>
+            </div>
+            <div style="font-size: 12px; color: #cfe3f5;">Depth below 5m</div>
+            <div style="height: 3px; margin-top: 8px; background: linear-gradient(90deg, #35e08a 0%, #e04b4b 100%);">
+              <div style="height: 100%; background: #fff; width: 60%;"></div>
+            </div>
+          </div>
+        </div>
+        <div style="border-top: 1px solid #1d425f; padding-top: 12px;">
+          <h3 style="font-size: 11px; color: #6f93b3; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 8px 0;">History</h3>
+          <div style="font-size: 11px; color: #7ea6c6; padding: 6px 8px; background: rgba(9, 24, 38, 0.6); border-radius: 4px; border-left: 2px solid #e04b4b;">14:25:33 - GROUNDING_RISK</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Screenshot 3: Action Confirmation Dialog</h2>
+  <div class="screenshot">
+    <div class="screenshot-header">
+      Safety-critical action confirmation with backdrop blur
+    </div>
+    <div class="screenshot-content">
+      <div style="position: relative; height: 300px; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center;">
+        <div style="background: rgba(16, 38, 58, 0.95); border: 1px solid #1d425f; border-radius: 12px; padding: 20px; min-width: 320px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);">
+          <h3 style="font-size: 16px; font-weight: 600; color: #ffd9a8; margin: 0 0 12px 0;">CONFIRM HAUL GEAR</h3>
+          <p style="font-size: 13px; color: #cfe3f5; margin: 0 0 16px 0;">Haul gear now? This will retrieve all deployed gear.</p>
+          <div style="background: rgba(9, 24, 38, 0.8); border: 1px solid #163349; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-family: monospace; font-size: 11px; color: #7ea6c6;">
+            {}
+          </div>
+          <div style="display: flex; gap: 12px; justify-content: flex-end;">
+            <button style="background: #e04b4b; color: #fff; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; border: none;">Confirm</button>
+            <button style="background: rgba(111, 147, 179, 0.3); color: #cfe3f5; border: 1px solid #1d425f; padding: 8px 16px; border-radius: 6px; font-size: 13px;">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Screenshot 4: Quick Actions Panel</h2>
+  <div class="screenshot">
+    <div class="screenshot-header">
+      Bottom-left quick action buttons for common operations
+    </div>
+    <div class="screenshot-content">
+      <div style="background: rgba(16, 38, 58, 0.9); border: 1px solid #1d425f; border-radius: 10px; padding: 14px; width: 320px;">
+        <h3 style="font-size: 14px; color: #ffd9a8; margin: 0 0 12px 0;">Quick Actions</h3>
+        <div style="display: flex; gap: 8px;">
+          <button style="background: rgba(16, 38, 58, 0.9); border: 1px solid #1d425f; color: #cfe3f5; padding: 10px 16px; border-radius: 8px; font-size: 12px; font-weight: 600;">▲ Haul Gear</button>
+          <button style="background: rgba(16, 38, 58, 0.9); border: 1px solid #1d425f; color: #cfe3f5; padding: 10px 16px; border-radius: 8px; font-size: 12px; font-weight: 600;">⚓ Drop Anchor</button>
+          <button style="background: rgba(16, 38, 58, 0.9); border: 1px solid #1d425f; color: #cfe3f5; padding: 10px 16px; border-radius: 8px; font-size: 12px; font-weight: 600;">✕ Clear Alerts</button>
+        </div>
+        <div style="margin-top: 12px; padding: 10px; background: rgba(9, 24, 38, 0.6); border-radius: 6px; font-size: 11px; color: #7ea6c6;">
+          <strong>Hover</strong> over buttons to see action descriptions.<br>
+          <strong>Click</strong> to open confirmation dialog.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>WebSocket Message Schema</h2>
+  <div class="screenshot">
+    <div class="screenshot-header">
+      Action event format from twin core
+    </div>
+    <div class="screenshot-content">
+      <div class="code-block">
+{
+  "type": "action",
+  "data": {
+    "action": "raise_alert",
+    "payload": {
+      "severity": "critical",
+      "code": "GROUNDING_RISK",
+      "message": "GROUNDING RISK: depth=0.8m"
+    },
+    "reason": "depth=0.80m",
+    "priority": 0.95,
+    "rule_id": "grounding-risk",
+    "timestamp_ns": 1690000000000000
+  }
+}
+      </div>
+    </div>
+  </div>
+
+  <h2>Testing the Alerts UI</h2>
+  <div class="description">
+    <strong>Access Points:</strong><br>
+    • Demo (standalone): <a href="demo.html" style="color: #35e08a;">demo.html</a><br>
+    • Test Page: <a href="test_alerts.html" style="color: #35e08a;">test_alerts.html</a><br>
+    • Main Viewer: <a href="index.html" style="color: #35e08a;">index.html</a>
+  </div>
+
+  <div class="screenshot">
+    <div class="screenshot-header">
+      Browser Console Testing
+    </div>
+    <div class="screenshot-content">
+      <div class="code-block">
+// Load test functions
+const script = document.createElement('script');
+script.src = 'test_alerts.js';
+document.head.appendChild(script);
+
+// Run tests
+testAlerts.runAll();      // All alert levels
+testAlerts.critical();    // Critical alert only
+testAlerts.clear();       // Clear all alerts
+      </div>
+    </div>
+  </div>
+
+  <h2>Default Watcher Rules</h2>
+  <div class="screenshot">
+    <div class="screenshot-header">
+      Built-in safety alerts in twin core
+    </div>
+    <div class="screenshot-content">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
+        <div style="background: rgba(224, 75, 75, 0.15); border: 1px solid #e04b4b; border-radius: 8px; padding: 12px;">
+          <h4 style="color: #e04b4b; margin: 0 0 8px 0;">GROUNDING_RISK</h4>
+          <div style="font-size: 12px; color: #cfe3f5;"><strong>Trigger:</strong> depth &lt; 1.0m</div>
+          <div style="font-size: 12px; color: #cfe3f5;"><strong>Priority:</strong> 0.95 (critical)</div>
+          <div style="font-size: 12px; color: #cfe3f5;"><strong>Cooldown:</strong> 15s</div>
+        </div>
+        <div style="background: rgba(224, 177, 60, 0.1); border: 1px solid #e0b13c; border-radius: 8px; padding: 12px;">
+          <h4 style="color: #e0b13c; margin: 0 0 8px 0;">SHALLOW_WATER</h4>
+          <div style="font-size: 12px; color: #cfe3f5;"><strong>Trigger:</strong> depth &lt; 2.0m</div>
+          <div style="font-size: 12px; color: #cfe3f5;"><strong>Priority:</strong> 0.85 (high)</div>
+          <div style="font-size: 12px; color: #cfe3f5;"><strong>Cooldown:</strong> 30s</div>
+        </div>
+        <div style="background: rgba(224, 75, 75, 0.15); border: 1px solid #e04b4b; border-radius: 8px; padding: 12px;">
+          <h4 style="color: #e04b4b; margin: 0 0 8px 0;">ENGINE_OVERHEAT</h4>
+          <div style="font-size: 12px; color: #cfe3f5;"><strong>Trigger:</strong> engine_temp &gt; 90°C</div>
+          <div style="font-size: 12px; color: #cfe3f5;"><strong>Priority:</strong> 0.92 (critical)</div>
+          <div style="font-size: 12px; color: #cfe3f5;"><strong>Cooldown:</strong> 20s</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="description">
+    <strong>Documentation:</strong> See <a href="ALERTS_UI_DOCUMENTATION.md" style="color: #35e08a;">ALERTS_UI_DOCUMENTATION.md</a> for complete implementation details.
+  </div>
+
+  <div style="margin-top: 30px; padding: 15px; background: rgba(53, 224, 138, 0.1); border: 1px solid #35e08a; border-radius: 8px;">
+    <strong>Status:</strong> ✅ Alerts UI fully implemented and tested
+  </div>
+</body>
+</html>

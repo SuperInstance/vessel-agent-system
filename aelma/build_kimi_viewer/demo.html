@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AELMA Alerts UI Demo</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .demo-controls {
+      position: fixed;
+      top: 12px;
+      right: 344px;
+      background: rgba(16, 38, 58, 0.9);
+      border: 1px solid #1d425f;
+      border-radius: 8px;
+      padding: 12px;
+      z-index: 200;
+    }
+    .demo-controls h3 {
+      font-size: 12px;
+      color: #ffd9a8;
+      margin: 0 0 8px 0;
+    }
+    .demo-controls button {
+      background: #1d425f;
+      color: #cfe3f5;
+      border: 1px solid #35e08a;
+      padding: 6px 12px;
+      margin: 2px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+    .demo-controls button:hover {
+      background: #35e08a;
+    }
+    .demo-scene {
+      background: linear-gradient(180deg, #87b5cd 0%, #5a9bc4 100%);
+      width: 100%;
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+    .demo-vessel {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 20px;
+      height: 40px;
+      background: #ff7700;
+      border-radius: 50% 50% 0 0;
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-scene">
+    <div class="demo-vessel"></div>
+  </div>
+
+  <!-- Demo Controls -->
+  <div class="demo-controls">
+    <h3>DEMO CONTROLS</h3>
+    <button onclick="demoCritical()">Critical Alert</button>
+    <button onclick="demoHigh()">High Alert</button>
+    <button onclick="demoMedium()">Medium Alert</button>
+    <button onclick="demoLow()">Low Alert</button>
+    <button onclick="demoAll()">All Alerts</button>
+    <button onclick="demoClear()">Clear All</button>
+  </div>
+
+  <!-- Alerts Panel -->
+  <div id="alerts-panel" class="alerts-panel">
+    <div class="alerts-header">
+      <h2>ALERTS</h2>
+      <button id="clear-all-alerts" class="btn-clear-all" onclick="demoClear()">✕ Clear All</button>
+    </div>
+    <div id="alerts-list" class="alerts-list"></div>
+    <div id="alerts-history" class="alerts-history">
+      <h3>History</h3>
+      <div id="alerts-history-list" class="alerts-history-list"></div>
+    </div>
+  </div>
+
+  <!-- Quick Actions Panel -->
+  <div id="quick-actions" class="quick-actions">
+    <button class="action-btn" onclick="showAction('haul_gear')">▲ Haul Gear</button>
+    <button class="action-btn" onclick="showAction('anchor_drop')">⚓ Drop Anchor</button>
+    <button class="action-btn" onclick="demoClear()">✕ Clear Alerts</button>
+  </div>
+
+  <!-- Action Confirmation Dialog -->
+  <div id="action-dialog" class="action-dialog hidden">
+    <div class="dialog-content">
+      <h3 id="dialog-title">Confirm Action</h3>
+      <p id="dialog-message">Are you sure?</p>
+      <div id="dialog-payload" class="dialog-payload"></div>
+      <div class="dialog-buttons">
+        <button id="dialog-confirm" class="btn-confirm" onclick="confirmAction()">Confirm</button>
+        <button id="dialog-cancel" class="btn-cancel" onclick="hideActionDialog()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Demo alert system
+    let alertIdCounter = 0;
+    const activeAlerts = new Map();
+    const alertHistory = [];
+
+    function getPriorityLevel(priority) {
+      if (priority >= 0.9) return 'critical';
+      if (priority >= 0.7) return 'high';
+      if (priority >= 0.4) return 'medium';
+      return 'low';
+    }
+
+    function formatTimestamp(ns) {
+      const s = Math.floor(ns / 1e9);
+      const date = new Date(s * 1000);
+      return date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    function addAlert(alert) {
+      const alertId = `alert-${++alertIdCounter}`;
+      alert.id = alertId;
+      activeAlerts.set(alertId, alert);
+      renderAlert(alert);
+      addToHistory(alert);
+    }
+
+    function renderAlert(alert) {
+      const list = document.getElementById('alerts-list');
+      const item = document.createElement('div');
+      item.className = `alert-item priority-${getPriorityLevel(alert.priority)}`;
+      item.id = alert.id;
+      item.style.setProperty('--priority-percent', `${alert.priority * 100}%`);
+
+      const code = alert.payload?.code || 'ALERT';
+      const message = alert.payload?.message || alert.reason || alert.action;
+
+      item.innerHTML = `
+        <button class="btn-dismiss-alert" onclick="dismissAlert('${alert.id}')">✕</button>
+        <div class="alert-header">
+          <span class="alert-code">${code}</span>
+          <span class="alert-time">${formatTimestamp(alert.timestamp_ns)}</span>
+        </div>
+        <div class="alert-message">${message}</div>
+        <div class="alert-reason">${alert.reason}</div>
+        <div class="alert-priority-bar"></div>
+      `;
+
+      list.appendChild(item);
+    }
+
+    function dismissAlert(alertId) {
+      const item = document.getElementById(alertId);
+      if (item) item.remove();
+      activeAlerts.delete(alertId);
+    }
+
+    function demoClear() {
+      for (const alertId of activeAlerts.keys()) {
+        dismissAlert(alertId);
+      }
+    }
+
+    function addToHistory(alert) {
+      alertHistory.unshift(alert);
+      if (alertHistory.length > 20) alertHistory.pop();
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const list = document.getElementById('alerts-history-list');
+      list.innerHTML = '';
+
+      if (alertHistory.length === 0) {
+        list.innerHTML = '<div class="empty-state">No alert history</div>';
+        return;
+      }
+
+      for (const alert of alertHistory) {
+        const item = document.createElement('div');
+        item.className = `history-item ${getPriorityLevel(alert.priority)}`;
+        const code = alert.payload?.code || 'ALERT';
+        item.textContent = `${formatTimestamp(alert.timestamp_ns)} - ${code}`;
+        list.appendChild(item);
+      }
+    }
+
+    function createAlert(severity, code, message, reason, priority) {
+      return {
+        action: 'raise_alert',
+        payload: { severity, code, message },
+        reason,
+        priority,
+        timestamp_ns: BigInt(Date.now() * 1e6).toString()
+      };
+    }
+
+    function demoCritical() {
+      addAlert(createAlert('critical', 'GROUNDING_RISK', 'GROUNDING RISK: depth=0.8m', 'depth=0.80m', 0.95));
+    }
+
+    function demoHigh() {
+      addAlert(createAlert('warning', 'SHALLOW_WATER', 'Depth critical: 1.5m', 'depth=1.50m', 0.85));
+    }
+
+    function demoMedium() {
+      addAlert(createAlert('info', 'DEPTH_WARNING', 'Depth below 5m', 'depth=4.80m', 0.6));
+    }
+
+    function demoLow() {
+      addAlert(createAlert('info', 'DEPTH_LOW', 'Depth decreasing', 'depth=8.20m', 0.3));
+    }
+
+    function demoAll() {
+      demoCritical();
+      setTimeout(demoHigh, 500);
+      setTimeout(demoMedium, 1000);
+      setTimeout(demoLow, 1500);
+    }
+
+    function showActionDialog(title, message, payload) {
+      document.getElementById('dialog-title').textContent = title;
+      document.getElementById('dialog-message').textContent = message;
+      document.getElementById('dialog-payload').textContent = payload || '';
+      document.getElementById('action-dialog').classList.remove('hidden');
+    }
+
+    function hideActionDialog() {
+      document.getElementById('action-dialog').classList.add('hidden');
+    }
+
+    function showAction(action) {
+      const messages = {
+        'haul_gear': 'Haul gear now? This will retrieve all deployed gear.',
+        'anchor_drop': 'Drop anchor now? This will stop the vessel.',
+      };
+      showActionDialog(
+        action.toUpperCase().replace('_', ' '),
+        messages[action] || 'Execute this action?',
+        ''
+      );
+    }
+
+    function confirmAction() {
+      hideActionDialog();
+      alert('Action executed (demo mode)');
+    }
+
+    // Initialize with empty state
+    renderHistory();
+  </script>
+</body>
+</html>

@@ -17,6 +17,39 @@
 <body>
   <div id="scene-container"></div>
 
+  <!-- Alerts Panel -->
+  <div id="alerts-panel" class="alerts-panel">
+    <div class="alerts-header">
+      <h2>ALERTS</h2>
+      <button id="clear-all-alerts" class="btn-clear-all" title="Clear all alerts">✕ Clear All</button>
+    </div>
+    <div id="alerts-list" class="alerts-list"></div>
+    <div id="alerts-history" class="alerts-history">
+      <h3>History</h3>
+      <div id="alerts-history-list" class="alerts-history-list"></div>
+    </div>
+  </div>
+
+  <!-- Quick Actions Panel -->
+  <div id="quick-actions" class="quick-actions">
+    <button class="action-btn" data-action="haul_gear" title="Haul Gear">▲ Haul Gear</button>
+    <button class="action-btn" data-action="anchor_drop" title="Drop Anchor">⚓ Drop Anchor</button>
+    <button class="action-btn" data-action="clear_alerts" title="Clear Alerts">✕ Clear Alerts</button>
+  </div>
+
+  <!-- Action Confirmation Dialog -->
+  <div id="action-dialog" class="action-dialog hidden">
+    <div class="dialog-content">
+      <h3 id="dialog-title">Confirm Action</h3>
+      <p id="dialog-message">Are you sure?</p>
+      <div id="dialog-payload" class="dialog-payload"></div>
+      <div class="dialog-buttons">
+        <button id="dialog-confirm" class="btn-confirm">Confirm</button>
+        <button id="dialog-cancel" class="btn-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <aside id="sidebar">
     <header class="panel">
       <div class="title-row">

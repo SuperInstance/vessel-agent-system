@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Alerts UI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        h1 { color: #ffd9a8; }
+        button {
+            background: #1d425f;
+            color: #cfe3f5;
+            border: 1px solid #35e08a;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover { background: #35e08a; }
+        .log {
+            background: #0a1a2b;
+            border: 1px solid #1d425f;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background: rgba(53, 224, 138, 0.2);
+            border: 1px solid #35e08a;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Alerts UI - AELMA Viewer</h1>
+    <div class="status" id="status">Connecting to ws://localhost:8090...</div>
+
+    <div>
+        <h3>Send Test Alerts:</h3>
+        <button onclick="sendCriticalAlert()">Send Critical Alert</button>
+        <button onclick="sendHighAlert()">Send High Priority Alert</button>
+        <button onclick="sendMediumAlert()">Send Medium Priority Alert</button>
+        <button onclick="sendLowAlert()">Send Low Priority Alert</button>
+        <button onclick="clearAlerts()">Clear All Alerts</button>
+    </div>
+
+    <div class="log" id="log"></div>
+
+    <script>
+        let ws;
+        const logEl = document.getElementById('log');
+        const statusEl = document.getElementById('status');
+
+        function log(msg) {
+            const time = new Date().toLocaleTimeString();
+            logEl.innerHTML = `<div>[${time}] ${msg}</div>` + logEl.innerHTML;
+        }
+
+        function connect() {
+            ws = new WebSocket('ws://localhost:8090');
+
+            ws.onopen = () => {
+                statusEl.textContent = 'Connected to twin core';
+                statusEl.style.borderColor = '#35e08a';
+                log('Connected to twin core');
+            };
+
+            ws.onerror = (err) => {
+                statusEl.textContent = 'Connection error';
+                statusEl.style.borderColor = '#e04b4b';
+                log('Connection error: ' + err);
+            };
+
+            ws.onclose = () => {
+                statusEl.textContent = 'Disconnected - retrying...';
+                statusEl.style.borderColor = '#e0b13c';
+                log('Disconnected - will retry in 3s');
+                setTimeout(connect, 3000);
+            };
+
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                log('Received: ' + msg.type + (msg.data?.action ? ` (${msg.data.action})` : ''));
+            };
+        }
+
+        function sendAction(action) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('Cannot send - not connected');
+                return;
+            }
+
+            const msg = {
+                type: 'action',
+                data: {
+                    action: 'raise_alert',
+                    payload: action.payload,
+                    reason: action.reason,
+                    priority: action.priority,
+                    rule_id: 'test-rule',
+                    timestamp_ns: BigInt(Date.now() * 1e6).toString()
+                }
+            };
+
+            ws.send(JSON.stringify(msg));
+            log(`Sent: ${action.payload.code} (priority: ${action.priority})`);
+        }
+
+        function sendCriticalAlert() {
+            sendAction({
+                payload: {
+                    severity: 'critical',
+                    code: 'GROUNDING_RISK',
+                    message: 'GROUNDING RISK: depth=0.8m'
+                },
+                reason: 'depth=0.80m',
+                priority: 0.95
+            });
+        }
+
+        function sendHighAlert() {
+            sendAction({
+                payload: {
+                    severity: 'warning',
+                    code: 'SHALLOW_WATER',
+                    message: 'Depth critical: 1.5m'
+                },
+                reason: 'depth=1.50m',
+                priority: 0.85
+            });
+        }
+
+        function sendMediumAlert() {
+            sendAction({
+                payload: {
+                    severity: 'info',
+                    code: 'DEPTH_WARNING',
+                    message: 'Depth below 5m'
+                },
+                reason: 'depth=4.80m',
+                priority: 0.6
+            });
+        }
+
+        function sendLowAlert() {
+            sendAction({
+                payload: {
+                    severity: 'info',
+                    code: 'DEPTH_LOW',
+                    message: 'Depth decreasing'
+                },
+                reason: 'depth=8.20m',
+                priority: 0.3
+            });
+        }
+
+        function clearAlerts() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('Cannot send - not connected');
+                return;
+            }
+
+            const msg = {
+                type: 'action',
+                data: {
+                    action: 'clear_alerts',
+                    payload: {},
+                    reason: 'User requested',
+                    priority: 0.5,
+                    rule_id: 'user-action'
+                }
+            };
+
+            ws.send(JSON.stringify(msg));
+            log('Sent: clear_alerts');
+        }
+
+        // Auto-connect
+        connect();
+    </script>
+</body>
+</html>
