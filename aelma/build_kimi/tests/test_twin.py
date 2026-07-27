@@ -291,3 +291,298 @@ class TestTwinCore:
         lat, lon, depth, conf = bathy["cells"][0]
         assert depth == pytest.approx(73.2)
         assert conf == pytest.approx(0.1, abs=1e-3)
+
+
+# --------------------------------------------------------------------- #
+# Watcher integration tests
+# --------------------------------------------------------------------- #
+
+class TestWatcherIntegration:
+    """Watcher rule evaluation, cooldown enforcement, and action emission."""
+
+    def _core(self, tmp_path) -> TwinCore:
+        """Create a TwinCore instance with watchers enabled."""
+        return TwinCore(
+            bathymetry_path=tmp_path / "bathy.json",
+            enable_watchers=True,
+            default_cooldown_s=30.0,
+        )
+
+    def test_watchers_initialized_on_core_creation(self, tmp_path):
+        """Watchers and history should be initialized when enable_watchers=True."""
+        core = self._core(tmp_path)
+        assert core._watchers is not None
+        assert core._watcher_history is not None
+        assert len(core._watchers) >= 3  # At least the default rules
+
+    def test_default_watchers_registered(self, tmp_path):
+        """Default vessel safety rules should be registered."""
+        core = self._core(tmp_path)
+        stats = core.get_watcher_stats()
+        rule_ids = [r["id"] for r in stats["rules"]]
+
+        assert "shallow-water" in rule_ids
+        assert "grounding-risk" in rule_ids
+        assert "engine-overheat" in rule_ids
+
+    def test_shallow_water_watcher_fires(self, tmp_path):
+        """Shallow water watcher should fire when depth < 2m."""
+        core = self._core(tmp_path)
+
+        # Set up position
+        for p in pos_packets(SITKA_LAT, SITKA_LON, T0):
+            core.handle_packet(p)
+
+        # Send shallow depth packet
+        core.handle_packet({
+            "timestamp_ns": T0 + 1,
+            "source": "nmea0183",
+            "channel": "depth_m",
+            "value": 1.5,  # Below 2m threshold
+            "quality": "good"
+        })
+
+        # Check watcher stats to verify the rule fired
+        stats = core.get_watcher_stats()
+        assert stats["history"]["total_fires"] == 1
+        assert "shallow-water" in stats["history"]["rules"]
+
+        # Evaluate manually to get the action details
+        frame = core._build_frame()
+        fired_actions = core._watchers.evaluate(frame)  # Should be empty due to cooldown
+
+        # But we can verify the rule fired by checking history
+        shallow_rule = stats["history"]["rules"]["shallow-water"]
+        assert shallow_rule["total_fires"] == 1
+
+    def test_grounding_risk_watcher_fires(self, tmp_path):
+        """Grounding risk watcher should fire when depth < 1m."""
+        core = self._core(tmp_path)
+
+        # Set up position
+        for p in pos_packets(SITKA_LAT, SITKA_LON, T0):
+            core.handle_packet(p)
+
+        # Send critical depth packet
+        core.handle_packet({
+            "timestamp_ns": T0 + 1,
+            "source": "nmea0183",
+            "channel": "depth_m",
+            "value": 0.8,  # Below 1m threshold
+            "quality": "good"
+        })
+
+        # Check watcher stats to verify the rule fired
+        stats = core.get_watcher_stats()
+        # 0.8m triggers both shallow-water (< 2m) and grounding-risk (< 1m)
+        assert stats["history"]["total_fires"] == 2
+        assert "grounding-risk" in stats["history"]["rules"]
+
+        grounding_rule = stats["history"]["rules"]["grounding-risk"]
+        assert grounding_rule["total_fires"] == 1
+
+    def test_engine_overheat_watcher_fires(self, tmp_path):
+        """Engine overheat watcher should fire when temp > 90C."""
+        core = self._core(tmp_path)
+
+        # Set up position
+        for p in pos_packets(SITKA_LAT, SITKA_LON, T0):
+            core.handle_packet(p)
+
+        # Send engine temperature packet
+        core.handle_packet({
+            "timestamp_ns": T0 + 1,
+            "source": "nmea2000",
+            "channel": "engine_temp_c",
+            "value": 95.0,  # Above 90C threshold
+            "quality": "good"
+        })
+
+        # Check watcher stats to verify the rule fired
+        stats = core.get_watcher_stats()
+        assert stats["history"]["total_fires"] == 1
+        assert "engine-overheat" in stats["history"]["rules"]
+
+        engine_rule = stats["history"]["rules"]["engine-overheat"]
+        assert engine_rule["total_fires"] == 1
+
+    def test_cooldown_enforcement(self, tmp_path):
+        """Watcher should not fire again within cooldown window."""
+        core = self._core(tmp_path)
+
+        # Set up position
+        for p in pos_packets(SITKA_LAT, SITKA_LON, T0):
+            core.handle_packet(p)
+
+        # First packet - should fire
+        core.handle_packet({
+            "timestamp_ns": T0 + 1,
+            "source": "nmea0183",
+            "channel": "depth_m",
+            "value": 1.5,
+            "quality": "good"
+        })
+
+        # Immediate second packet - should be suppressed by cooldown
+        core.handle_packet({
+            "timestamp_ns": T0 + 2,
+            "source": "nmea0183",
+            "channel": "depth_m",
+            "value": 1.5,
+            "quality": "good"
+        })
+
+        # Only one firing, one suppression
+        stats = core.get_watcher_stats()
+        assert stats["history"]["total_fires"] == 1
+        assert stats["history"]["total_suppressed"] == 1
+
+    def test_cooldown_stats_tracked(self, tmp_path):
+        """Watcher history should track suppressions and fires."""
+        core = self._core(tmp_path)
+
+        # Set up position
+        for p in pos_packets(SITKA_LAT, SITKA_LON, T0):
+            core.handle_packet(p)
+
+        # Fire the rule once
+        core.handle_packet({
+            "timestamp_ns": T0 + 1,
+            "source": "nmea0183",
+            "channel": "depth_m",
+            "value": 1.5,
+            "quality": "good"
+        })
+
+        # Try to fire again (should be suppressed)
+        core.handle_packet({
+            "timestamp_ns": T0 + 2,
+            "source": "nmea0183",
+            "channel": "depth_m",
+            "value": 1.5,
+            "quality": "good"
+        })
+
+        stats = core.get_watcher_stats()
+        history = stats["history"]
+
+        assert history["total_fires"] >= 1
+        assert history["total_suppressed"] >= 1
+
+        # Check rule-specific stats
+        shallow_rule = history["rules"].get("shallow-water")
+        assert shallow_rule is not None
+        assert shallow_rule["total_fires"] >= 1
+        assert shallow_rule["total_suppressed"] >= 1
+
+    def test_custom_watcher_registration(self, tmp_path):
+        """Custom watcher rules can be registered dynamically."""
+        core = self._core(tmp_path)
+
+        # Register a custom rule
+        rule_id = core.register_watcher({
+            "id": "high-speed-warning",
+            "name": "High speed warning",
+            "when": lambda f: f.get("speed_kn", 0) > 15.0,
+            "action": {
+                "name": "raise_alert",
+                "payload": lambda f: {
+                    "severity": "warning",
+                    "code": "HIGH_SPEED",
+                    "message": f"Speed high: {f['speed_kn']:.1f}kn"
+                },
+                "reason": lambda f: f"speed={f['speed_kn']:.1f}kn",
+                "priority": lambda f: 0.75,
+            },
+            "cooldown_s": 60.0,
+        })
+
+        assert rule_id == "high-speed-warning"
+
+        # Verify it's in the stats
+        stats = core.get_watcher_stats()
+        rule_ids = [r["id"] for r in stats["rules"]]
+        assert "high-speed-warning" in rule_ids
+
+    def test_watcher_unregistration(self, tmp_path):
+        """Watcher rules can be unregistered."""
+        core = self._core(tmp_path)
+
+        # Verify rule exists
+        stats = core.get_watcher_stats()
+        rule_ids = [r["id"] for r in stats["rules"]]
+        assert "shallow-water" in rule_ids
+
+        # Unregister
+        removed = core.unregister_watcher("shallow-water")
+        assert removed is True
+
+        # Verify it's gone
+        stats = core.get_watcher_stats()
+        rule_ids = [r["id"] for r in stats["rules"]]
+        assert "shallow-water" not in rule_ids
+
+    def test_watchers_disabled_with_flag(self, tmp_path):
+        """When enable_watchers=False, no rules should be evaluated."""
+        core = TwinCore(
+            bathymetry_path=tmp_path / "bathy.json",
+            enable_watchers=False,
+        )
+
+        # Should have no watchers
+        assert len(core._watchers) == 0
+
+    def test_frame_building_includes_all_fields(self, tmp_path):
+        """_build_frame should extract all relevant telemetry fields."""
+        core = self._core(tmp_path)
+
+        # Add various telemetry
+        for p in pos_packets(SITKA_LAT, SITKA_LON, T0):
+            core.handle_packet(p)
+
+        core.handle_packet({
+            "timestamp_ns": T0 + 1,
+            "source": "nmea0183",
+            "channel": "depth_m",
+            "value": 73.2,
+            "quality": "good"
+        })
+
+        frame = core._build_frame()
+
+        # Check pose data
+        assert frame["lat"] == pytest.approx(SITKA_LAT)
+        assert frame["lon"] == pytest.approx(SITKA_LON)
+        assert frame["vessel_id"] == "US-AK-FVEILEEN-51"
+
+        # Check channel data
+        assert frame["depth_m"] == 73.2
+        assert "timestamp_ns" in frame
+
+    def test_multiple_watchers_can_fire_simultaneously(self, tmp_path):
+        """Multiple watchers can fire on the same packet if conditions match."""
+        core = self._core(tmp_path)
+
+        # Set up position
+        for p in pos_packets(SITKA_LAT, SITKA_LON, T0):
+            core.handle_packet(p)
+
+        # Send packet that triggers both shallow-water and grounding-risk
+        core.handle_packet({
+            "timestamp_ns": T0 + 1,
+            "source": "nmea0183",
+            "channel": "depth_m",
+            "value": 0.5,  # Triggers both < 2m and < 1m
+            "quality": "good"
+        })
+
+        # Should fire two rules
+        stats = core.get_watcher_stats()
+        assert stats["history"]["total_fires"] == 2
+
+        # Both rules should have fired
+        history = stats["history"]
+        assert "shallow-water" in history["rules"]
+        assert "grounding-risk" in history["rules"]
+        assert history["rules"]["shallow-water"]["total_fires"] == 1
+        assert history["rules"]["grounding-risk"]["total_fires"] == 1
