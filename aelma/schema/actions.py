@@ -150,6 +150,27 @@ VESSEL_ACTION_SCHEMAS: Dict[str, PayloadSchema] = {
             },
         },
     },
+    "set_throttle": {
+        "description": "Set engine throttle/power level for propulsion.",
+        "required": ["throttle_percent"],
+        "properties": {
+            "throttle_percent": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 100.0,
+                "description": "Throttle percentage (0-100).",
+            },
+            "engine_id": {
+                "type": "string",
+                "description": "Specific engine ID if multi-engine configuration.",
+            },
+            "ramp_seconds": {
+                "type": "number",
+                "minimum": 0.0,
+                "description": "Ramp time in seconds for smooth transition.",
+            },
+        },
+    },
 }
 
 # Structured view of the same schemas for tooling that prefers dataclasses.
@@ -183,5 +204,11 @@ ACTION_SPECS: Dict[str, ActionSpec] = {
         category="navigation",
         schema=VESSEL_ACTION_SCHEMAS["morph_to_navigation_mode"],
         tags=["mode"],
+    ),
+    "set_throttle": ActionSpec(
+        name="set_throttle",
+        category="propulsion",
+        schema=VESSEL_ACTION_SCHEMAS["set_throttle"],
+        tags=["engine", "throttle"],
     ),
 }
