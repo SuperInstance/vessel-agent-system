@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aelma.dev/schema/telemetry_packet.schema.json",
+  "title": "Telemetry Packet",
+  "description": "Single sample of vessel telemetry, produced by the bridge from NMEA 0183/2000 sentences and consumed by the twin core over WebSocket. One packet = one instantaneous reading from the vessel bus. The bridge may batch multiple sensor readings into one packet (same timestamp) or emit one packet per reading; consumers must handle both.",
+  "type": "object",
+  "required": ["timestamp_ns", "source", "channel", "value"],
+  "additionalProperties": false,
+  "properties": {
+    "timestamp_ns": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "UTC nanoseconds since Unix epoch. From the bridge's monotonic clock at ingestion time; the bridge does not trust sensor timestamps (sensors lie)."
+    },
+    "source": {
+      "type": "string",
+      "enum": ["nmea0183", "nmea2000", "signal_k", "simulator", "manual"],
+      "description": "Origin of this reading. 'simulator' for the mock NMEA generator used in development. 'manual' for captain-entered values."
+    },
+    "channel": {
+      "type": "string",
+      "description": "Telemetry channel identifier. Examples: 'position.lat', 'position.lon', 'depth_m', 'water_speed_kn', 'wind_kts', 'wind_dir_deg', 'engine_rpm', 'sea_temp_c'. The twin core subscribes to channels by name.",
+      "examples": [
+        "position.lat",
+        "position.lon",
+        "depth_m",
+        "wind_kts",
+        "engine_rpm",
+        "sea_temp_c"
+      ]
+    },
+    "value": {
+      "type": ["number", "string", "boolean", "null"],
+      "description": "The reading itself. Numeric for most channels. String for enum-like channels (tide_state, moon_phase). Boolean for contact closures. Null for 'sensor lost signal'."
+    },
+    "quality": {
+      "type": "string",
+      "enum": ["good", "fair", "poor", "bad"],
+      "default": "good",
+      "description": "Signal quality indicator. 'good' = fresh and within plausible range. 'fair' = stale or marginal. 'poor' = old or out-of-range. 'bad' = sensor offline. The bridge assigns quality based on age and sanity checks."
+    },
+    "sentence": {
+      "type": ["string", "null"],
+      "description": "Original NMEA sentence or Signal K path this packet was derived from, for forensics. Null when source is 'manual' or 'simulator'."
+    }
+  },
+  "examples": [
+    {
+      "timestamp_ns": 1753478400000000000,
+      "source": "nmea0183",
+      "channel": "depth_m",
+      "value": 73.2,
+      "quality": "good",
+      "sentence": "$SDDPT,73.2,-1.5,*3A"
+    },
+    {
+      "timestamp_ns": 1753478400125000000,
+      "source": "nmea0183",
+      "channel": "position.lat",
+      "value": 56.80134,
+      "quality": "good",
+      "sentence": "$GPGGA,123456,5648.080,N,13518.167,W,1,08,0.8,0.0,M,0.0,M,,*59"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>AELMA Viewer — F/V EILEEN</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/controls/OrbitControls.js": "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="scene-container"></div>
+
+  <aside id="sidebar">
+    <header class="panel">
+      <div class="title-row">
+        <span id="status-dot" class="dot dot-disconnected" title="connection status"></span>
+        <h1 id="vessel-id">AELMA VIEWER</h1>
+      </div>
+      <div id="conn-status" class="subtitle">connecting…</div>
+    </header>
+
+    <section class="panel depth-panel">
+      <div class="label">DEPTH</div>
+      <div id="depth-big" class="depth-big q-none">—</div>
+      <div class="label" id="depth-quality">no data</div>
+    </section>
+
+    <section class="panel">
+      <div class="label">CHANNELS</div>
+      <div id="channel-grid" class="channel-grid"></div>
+    </section>
+
+    <section class="panel stats-panel">
+      <div class="stat-row"><span>Bathymetry voxels</span><span id="voxel-count" class="stat-val">0</span></div>
+      <div class="stat-row"><span>Session</span><span id="session-time" class="stat-val">00:00</span></div>
+      <div class="stat-row"><span>Position</span><span id="position" class="stat-val">—</span></div>
+    </section>
+  </aside>
+
+  <script type="module">
+    import './app.js';
+  </script>
+</body>
+</html>

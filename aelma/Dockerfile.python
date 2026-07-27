@@ -1,0 +1,9 @@
+# Shared Python base image for AELMA asyncio services.
+# Bridge, twin, and simulator all share this. ~30MB compressed.
+FROM python:3.12-slim
+
+# websockets is the only third-party dependency. Everything else is stdlib
+# per the design principle in ARCHITECTURE.md ("standard library Python").
+RUN pip install --no-cache-dir websockets==12.0
+
+WORKDIR /app

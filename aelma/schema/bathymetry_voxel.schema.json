@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aelma.dev/schema/bathymetry_voxel.schema.json",
+  "title": "Bathymetry Voxel",
+  "description": "Single depth measurement fused into the twin's progressive bathymetry grid. Each voxel accumulates evidence over time: the more soundings that fall in a cell, the higher the confidence. The voxel does not store the raw soundings; the twin's TSDF (truncated signed distance field) implementation keeps a running average and sample count per cell.",
+  "type": "object",
+  "required": ["lat", "lon", "depth_m", "confidence", "sample_count"],
+  "additionalProperties": false,
+  "properties": {
+    "lat": {
+      "type": "number",
+      "minimum": -90,
+      "maximum": 90,
+      "description": "Latitude of the cell center in decimal degrees."
+    },
+    "lon": {
+      "type": "number",
+      "minimum": -180,
+      "maximum": 180,
+      "description": "Longitude of the cell center in decimal degrees."
+    },
+    "depth_m": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 11000,
+      "description": "Running average depth in meters at this cell. Positive = water depth below the surface."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Confidence in the depth reading, 0 to 1. Confidence is a function of sample count and recency: 1 sample = 0.1, 5 samples = 0.5, 20+ samples = 0.9. Recency decay applies: confidence drops 10% per week without a new sample."
+    },
+    "sample_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of soundings fused into this cell since the twin started. Grows monotonically. Used for visualization (older cells render dimmer)."
+    },
+    "last_sample_ns": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "UTC nanoseconds of the most recent sounding fused into this cell."
+    },
+    "source": {
+      "type": "string",
+      "enum": ["sounder", "chart", "drone", "rov", "manual", "merged"],
+      "default": "sounder",
+      "description": "Source of the depth data. 'merged' when multiple sources have been fused into this cell."
+    }
+  },
+  "examples": [
+    {
+      "lat": 56.80134,
+      "lon": -135.30278,
+      "depth_m": 73.2,
+      "confidence": 0.85,
+      "sample_count": 23,
+      "last_sample_ns": 1753478400000000000,
+      "source": "sounder"
+    }
+  ]
+}

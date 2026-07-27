@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AELMA Viewer - F/V EILEEN</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="scene-container"></div>
+
+  <aside id="sidebar">
+    <div id="sidebar-header">
+      <div class="vessel-id">F/V EILEEN</div>
+      <div class="status-row">
+        <span id="status-dot" class="status-dot disconnected"></span>
+        <span id="status-text">Disconnected</span>
+      </div>
+    </div>
+
+    <div id="depth-readout" class="readout-big">
+      <div class="readout-label">DEPTH</div>
+      <div class="readout-value">
+        <span id="depth-value">--</span>
+        <span class="readout-unit">m</span>
+      </div>
+    </div>
+
+    <div id="channel-grid" class="channel-grid">
+      <!-- Channels populated dynamically -->
+    </div>
+
+    <div id="meta-panel" class="meta-panel">
+      <div class="meta-row">
+        <span class="meta-label">Voxels</span>
+        <span id="voxel-count" class="meta-value">0</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Speed</span>
+        <span id="speed-value" class="meta-value">-- kn</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Heading</span>
+        <span id="heading-value" class="meta-value">-- &deg;</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Session</span>
+        <span id="session-duration" class="meta-value">00:00</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Position</span>
+        <span id="position-value" class="meta-value">--</span>
+      </div>
+    </div>
+
+    <div id="footer-info" class="footer-info">
+      <span>AELMA Digital Twin</span>
+    </div>
+  </aside>
+
+  <div id="reconnect-overlay" class="reconnect-overlay hidden">
+    <div class="reconnect-message">
+      <div class="spinner"></div>
+      <p id="reconnect-text">Connecting...</p>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

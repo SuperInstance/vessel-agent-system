@@ -1,0 +1,193 @@
+"""TwinCore: the AELMA twin runtime.
+
+Composes :class:`VesselState` and :class:`BathymetryGrid` into an asyncio
+process that:
+
+1. connects as a WebSocket client to the bridge and ingests TelemetryPackets,
+2. fuses depth soundings into the progressive bathymetry grid,
+3. serves viewer WebSocket clients and broadcasts a VesselStateSnapshot
+   every ``broadcast_interval`` seconds,
+4. persists the bathymetry grid every ``persist_interval`` seconds.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+import time
+from pathlib import Path
+from typing import Any
+
+import websockets
+
+from .bathymetry import BathymetryGrid
+from .state import VesselState
+
+log = logging.getLogger("aelma.twin")
+
+# Telemetry channel carrying sounder depth; packet sources map onto the
+# bathymetry voxel source enum.
+DEPTH_CHANNEL = "depth_m"
+_SOURCE_MAP = {
+    "manual": "manual",
+    "simulator": "sounder",
+    "nmea0183": "sounder",
+    "nmea2000": "sounder",
+    "signal_k": "sounder",
+}
+
+
+class TwinCore:
+    """Digital twin for one vessel: state + bathymetry + WS plumbing."""
+
+    def __init__(
+        self,
+        bridge_url: str = "ws://localhost:8000",
+        viewer_port: int = 8090,
+        vessel_id: str = "US-AK-FVEILEEN-51",
+        bathymetry_path: str | Path = "bathymetry.json",
+        broadcast_interval: float = 1.0,
+        persist_interval: float = 60.0,
+        viewport_radius_m: float = 500.0,
+    ) -> None:
+        """Configure the twin; nothing connects until :meth:`run` is awaited."""
+        self.bridge_url = bridge_url
+        self.viewer_port = viewer_port
+        self.vessel_id = vessel_id
+        self.bathymetry_path = Path(bathymetry_path)
+        self.broadcast_interval = broadcast_interval
+        self.persist_interval = persist_interval
+        self.viewport_radius_m = viewport_radius_m
+
+        self.state = VesselState()
+        self.bathymetry = BathymetryGrid()
+        self._viewers: set[Any] = set()
+
+    # ------------------------------------------------------------------ #
+    # Packet handling
+    # ------------------------------------------------------------------ #
+    def handle_packet(self, packet: dict[str, Any]) -> None:
+        """Apply one TelemetryPacket to state and, if a sounding, the grid."""
+        self.state.apply_packet(packet)
+        if packet.get("channel") != DEPTH_CHANNEL:
+            return
+        value = packet.get("value")
+        if not isinstance(value, (int, float)) or value is None:
+            return
+        lat, lon = self.state.lat, self.state.lon
+        if lat is None or lon is None:
+            return  # no fix yet: nowhere to put the sounding
+        self.bathymetry.fuse(
+            lat,
+            lon,
+            float(value),
+            int(packet["timestamp_ns"]),
+            source=_SOURCE_MAP.get(str(packet.get("source")), "sounder"),
+        )
+
+    # ------------------------------------------------------------------ #
+    # Snapshot assembly
+    # ------------------------------------------------------------------ #
+    def build_snapshot(self, now_ns: int | None = None) -> dict[str, Any]:
+        """Assemble the full VesselStateSnapshot, including the bathymetry
+        viewport block centered on the (dead-reckoned) vessel position."""
+        if now_ns is None:
+            now_ns = time.time_ns()
+        snap = self.state.snapshot(self.vessel_id, [self.viewport_radius_m], now_ns)
+        lat, lon = snap["pose"]["lat"], snap["pose"]["lon"]
+        snap["bathymetry"] = {
+            "voxel_count": self.bathymetry.total_voxels(),
+            "viewport_center": {"lat": lat, "lon": lon},
+            "viewport_radius_m": self.viewport_radius_m,
+            "cells": self.bathymetry.cells_in_radius(
+                lat, lon, self.viewport_radius_m, now_ns
+            ),
+        }
+        return snap
+
+    # ------------------------------------------------------------------ #
+    # Bridge side (WebSocket client)
+    # ------------------------------------------------------------------ #
+    async def _bridge_loop(self) -> None:
+        """Connect to the bridge and ingest packets, reconnecting forever."""
+        backoff = 1.0
+        while True:
+            try:
+                async with websockets.connect(self.bridge_url) as ws:
+                    log.info("connected to bridge at %s", self.bridge_url)
+                    backoff = 1.0
+                    async for raw in ws:
+                        try:
+                            packet = json.loads(raw)
+                            if isinstance(packet, list):
+                                for p in packet:
+                                    self.handle_packet(p)
+                            else:
+                                self.handle_packet(packet)
+                        except (json.JSONDecodeError, KeyError, TypeError) as exc:
+                            log.warning("dropping malformed packet: %s", exc)
+            except (OSError, websockets.WebSocketException) as exc:
+                log.warning("bridge connection failed (%s); retry in %.0fs", exc, backoff)
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2.0, 30.0)
+
+    # ------------------------------------------------------------------ #
+    # Viewer side (WebSocket server)
+    # ------------------------------------------------------------------ #
+    async def _viewer_handler(self, ws: Any) -> None:
+        """Register a viewer, push an immediate snapshot, hold until close."""
+        self._viewers.add(ws)
+        log.info("viewer connected (%d total)", len(self._viewers))
+        try:
+            await ws.send(json.dumps(self.build_snapshot()))
+            await ws.wait_closed()
+        finally:
+            self._viewers.discard(ws)
+            log.info("viewer disconnected (%d total)", len(self._viewers))
+
+    async def _broadcast_loop(self) -> None:
+        """Send a fresh snapshot to every connected viewer on the interval."""
+        while True:
+            await asyncio.sleep(self.broadcast_interval)
+            if not self._viewers:
+                continue
+            msg = json.dumps(self.build_snapshot())
+            results = await asyncio.gather(
+                *(ws.send(msg) for ws in list(self._viewers)),
+                return_exceptions=True,
+            )
+            for ws, res in zip(list(self._viewers), results):
+                if isinstance(res, Exception):
+                    self._viewers.discard(ws)
+
+    # ------------------------------------------------------------------ #
+    # Persistence
+    # ------------------------------------------------------------------ #
+    async def _persist_loop(self) -> None:
+        """Write the bathymetry grid to disk on the persist interval."""
+        while True:
+            await asyncio.sleep(self.persist_interval)
+            try:
+                self.bathymetry.save(self.bathymetry_path)
+                log.info(
+                    "persisted %d voxels to %s",
+                    self.bathymetry.total_voxels(),
+                    self.bathymetry_path,
+                )
+            except OSError as exc:
+                log.error("bathymetry persist failed: %s", exc)
+
+    # ------------------------------------------------------------------ #
+    # Entry point
+    # ------------------------------------------------------------------ #
+    async def run(self) -> None:
+        """Load persisted state, then run all loops until cancelled."""
+        self.bathymetry.load(self.bathymetry_path)
+        async with websockets.serve(self._viewer_handler, "localhost", self.viewer_port):
+            log.info("viewer WS server listening on port %d", self.viewer_port)
+            await asyncio.gather(
+                self._bridge_loop(),
+                self._broadcast_loop(),
+                self._persist_loop(),
+            )

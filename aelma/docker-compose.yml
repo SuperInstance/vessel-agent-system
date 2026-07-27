@@ -1,0 +1,74 @@
+# AELMA stack — one-command vessel-side digital twin.
+#
+#   docker compose up
+#   open http://localhost:8080
+#
+# All four services run on the vessel LAN with zero internet dependency.
+# See ARCHITECTURE.md for the data flow diagram.
+
+services:
+  simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    image: aelma-python
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: ["python", "-m", "simulator", "--duration-min", "1440", "--speedup", "1"]
+    networks: [aelma]
+    restart: unless-stopped
+
+  bridge:
+    image: aelma-python
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: ["python", "-m", "bridge", "--tcp-port", "8001", "--ws-port", "8000"]
+    ports:
+      - "8001:8001"   # NMEA 0183 TCP input (point hardware/Signal K here)
+      - "8000:8000"   # TelemetryPacket WS output (twin subscribes here)
+    networks: [aelma]
+    restart: unless-stopped
+    depends_on: [simulator]
+
+  twin:
+    image: aelma-python
+    working_dir: /app
+    volumes:
+      - .:/app
+      - aelma-bathymetry:/data
+    command:
+      - "python"
+      - "-m"
+      - "twin"
+      - "--bridge-url"
+      - "ws://bridge:8000"
+      - "--viewer-port"
+      - "8090"
+      - "--bathymetry-path"
+      - "/data/bathymetry.json"
+    ports:
+      - "8090:8090"   # VesselStateSnapshot WS (viewers subscribe here)
+    networks: [aelma]
+    restart: unless-stopped
+    depends_on: [bridge]
+
+  viewer:
+    image: aelma-python
+    working_dir: /app/viewer
+    volumes:
+      - .:/app
+    command: ["python", "serve.py", "--port", "8080"]
+    ports:
+      - "8080:8080"   # HTTP — open this in any browser on the LAN
+    networks: [aelma]
+    restart: unless-stopped
+    depends_on: [twin]
+
+networks:
+  aelma:
+    driver: bridge
+
+volumes:
+  aelma-bathymetry:
