@@ -25,6 +25,7 @@ from .a2a_log import A2ALog
 from .bathymetry import BathymetryGrid
 from .circuit_breaker import CircuitBreaker
 from .health import HealthChecker
+from .jepa_model import JEPAModel
 from .metrics import (
     ACTIONS_FIRED,
     MEMORY_BYTES,
@@ -73,6 +74,11 @@ class TwinCore:
         breaker_recovery_timeout: float = 30.0,
         health_port: int | None = 8091,
         metrics_port: int | None = 9090,
+        enable_jepa: bool = True,
+        jepa_history_size: int = 1000,
+        jepa_learning_rate: float = 0.1,
+        jepa_anomaly_threshold: float = 2.5,
+        jepa_min_samples: int = 10,
     ) -> None:
         """Configure the twin; nothing connects until :meth:`run` is awaited."""
         self.bridge_url = bridge_url
@@ -118,6 +124,15 @@ class TwinCore:
         self.metrics.register_histogram(
             PACKET_HANDLING_SECONDS, help="Time spent applying one telemetry packet."
         )
+
+        # JEPA world model for predictive telemetry and anomaly detection
+        self.enable_jepa = enable_jepa
+        self.jepa = JEPAModel(
+            history_size=jepa_history_size,
+            learning_rate=jepa_learning_rate,
+            anomaly_threshold=jepa_anomaly_threshold,
+            min_samples=jepa_min_samples,
+        ) if enable_jepa else None
 
     # ------------------------------------------------------------------ #
     # Packet handling
@@ -279,6 +294,11 @@ class TwinCore:
         started = time.perf_counter()
         try:
             self.state.apply_packet(packet)
+
+            # Train JEPA model on every packet
+            if self.jepa is not None:
+                self.jepa.train_on_packet(packet)
+
             if packet.get("channel") != DEPTH_CHANNEL:
                 return
             value = packet.get("value")
@@ -294,10 +314,45 @@ class TwinCore:
                 int(packet["timestamp_ns"]),
                 source=_SOURCE_MAP.get(str(packet.get("source")), "sounder"),
             )
+
+            # Run JEPA prediction and anomaly detection on depth packets
+            if self.jepa is not None:
+                self._run_jepa_prediction(packet)
         finally:
             self.metrics.increment(PACKETS_RECEIVED)
             self.metrics.observe(
                 PACKET_HANDLING_SECONDS, time.perf_counter() - started
+            )
+
+    def _run_jepa_prediction(self, packet: dict[str, Any]) -> None:
+        """Run JEPA prediction and emit anomaly events if needed."""
+        if self.jepa is None:
+            return
+
+        # Build current state dict from packet and state
+        current_state = {
+            "depth_m": packet.get("value"),
+            "speed_kn": self.state.speed_kn,
+            "lat": self.state.lat,
+            "lon": self.state.lon,
+            "heading_deg": self.state.heading_deg,
+            "timestamp_ns": packet.get("timestamp_ns"),
+        }
+
+        # Try to predict next state
+        prediction = self.jepa.predict_future(current_state, steps_ahead=1)
+        if prediction is None:
+            return  # Not enough data yet
+
+        # Check for anomalies
+        # For now, we'll log anomalous predictions
+        # In production, this would emit watcher events
+        if prediction.anomaly_score > 0.5:
+            log.warning(
+                "JEPA detected anomaly: score=%.2f, confidence=%.2f, errors=%s",
+                prediction.anomaly_score,
+                prediction.confidence,
+                prediction.errors,
             )
 
     # ------------------------------------------------------------------ #
@@ -318,6 +373,11 @@ class TwinCore:
                 lat, lon, self.viewport_radius_m, now_ns
             ),
         }
+
+        # Add JEPA world model stats if enabled
+        if self.jepa is not None:
+            snap["jepa"] = self.jepa.stats
+
         return snap
 
     # ------------------------------------------------------------------ #

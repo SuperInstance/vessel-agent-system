@@ -1,0 +1,37 @@
+{
+  "data_dir": "fleet_data",
+  "fleet_viewer_port": 8092,
+  "broadcast_interval": 1.0,
+  "vessels": {
+    "US-AK-FVEILEEN-51": {
+      "bridge_url": "ws://localhost:8000",
+      "name": "F/V Pioneer",
+      "vessel_type": "fishing",
+      "viewer_port": 8090,
+      "bathymetry_path": "bathymetry_pioneer.json",
+      "a2a_log_path": "a2a_pioneer.jsonl",
+      "oplog_path": "oplog_pioneer.jsonl",
+      "viewport_radius_m": 500.0
+    },
+    "US-AK-EXPLORER-42": {
+      "bridge_url": "ws://localhost:8001",
+      "name": "F/V Explorer",
+      "vessel_type": "fishing",
+      "viewer_port": 8091,
+      "bathymetry_path": "bathymetry_explorer.json",
+      "a2a_log_path": "a2a_explorer.jsonl",
+      "oplog_path": "oplog_explorer.jsonl",
+      "viewport_radius_m": 500.0
+    },
+    "US-AK-SURVEYOR-07": {
+      "bridge_url": "ws://localhost:8002",
+      "name": "R/V Surveyor",
+      "vessel_type": "research",
+      "viewer_port": 8093,
+      "bathymetry_path": "bathymetry_surveyor.json",
+      "a2a_log_path": "a2a_surveyor.jsonl",
+      "oplog_path": "oplog_surveyor.jsonl",
+      "viewport_radius_m": 750.0
+    }
+  }
+}

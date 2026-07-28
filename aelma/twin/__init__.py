@@ -9,6 +9,8 @@ from .bathymetry import BathymetryGrid
 from .catch_log import CatchLog
 from .circuit_breaker import CircuitBreaker, CircuitBreakerOpen, State
 from .core import TwinCore
+from .fleet_manager import FleetManager, VesselInstance
+from .fleet_server import FleetServer
 from .gear_tracker import GearTracker
 from .llm_narrator import Narrator
 from .plugins import Plugin, PluginContext, PluginManager
@@ -50,6 +52,10 @@ __all__ = [
     "WatcherHistory",
     "WatcherRegistry",
     "WatcherRule",
+    # Fleet Management
+    "FleetManager",
+    "FleetServer",
+    "VesselInstance",
     # Utilities
     "bearing_deg",
     "haversine_m",

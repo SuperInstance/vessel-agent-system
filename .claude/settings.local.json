@@ -39,7 +39,8 @@
       "Bash(timeout 5s curl:*)",
       "Bash(pkill:*)",
       "Bash(chmod:*)",
-      "Bash(timeout 20 python -m pytest:*)"
+      "Bash(timeout 20 python -m pytest:*)",
+      "Bash(PYTHONPATH=/c/Users/casey/claudetz/aelma python:*)"
     ]
   }
 }
