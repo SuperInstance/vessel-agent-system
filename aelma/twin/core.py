@@ -34,6 +34,7 @@ from .metrics import (
     MetricsCollector,
     serve_metrics,
 )
+from .oplog import OpLog
 from .state import VesselState
 
 log = logging.getLogger("aelma.twin")
@@ -65,6 +66,9 @@ class TwinCore:
         a2a_log_path: str | Path = "a2a.jsonl",
         a2a_max_bytes: int | None = None,
         a2a_keep: int = 5,
+        oplog_path: str | Path = "oplog.jsonl",
+        oplog_max_bytes: int | None = None,
+        oplog_keep: int = 5,
         breaker_failure_threshold: int = 5,
         breaker_recovery_timeout: float = 30.0,
         health_port: int | None = 8091,
@@ -79,6 +83,7 @@ class TwinCore:
         self.persist_interval = persist_interval
         self.viewport_radius_m = viewport_radius_m
         self.a2a_log_path = Path(a2a_log_path)
+        self.oplog_path = Path(oplog_path)
         self.metrics_port = metrics_port
 
         self.state = VesselState()
@@ -87,6 +92,7 @@ class TwinCore:
         # Flipped by _bridge_loop; read by the health endpoint.
         self.bridge_connected = False
         self.a2a_log = A2ALog(self.a2a_log_path, max_bytes=a2a_max_bytes, keep=a2a_keep)
+        self.oplog = OpLog(self.oplog_path, max_bytes=oplog_max_bytes, keep=oplog_keep)
         # Protects the bridge WebSocket client from hammering a dead bridge:
         # consecutive connect failures trip it OPEN for the recovery timeout.
         self.bridge_breaker = CircuitBreaker(
@@ -139,6 +145,134 @@ class TwinCore:
             reason=reason,
             priority=priority,
         )
+
+    async def log_crew_action(
+        self,
+        entry_type: str,
+        crew: str,
+        message: str,
+        metadata: dict[str, Any] | None = None,
+        *,
+        ts: Any = None,
+    ) -> dict[str, Any]:
+        """Log a crew operations entry to the operations log.
+
+        This is the main entry point for logging manual crew operations such as
+        gear deployment/retrieval, haul operations, anchor handling, catch logging,
+        manual alerts, and general crew notes.
+
+        Parameters
+        ----------
+        entry_type:
+            Type of operation (gear_deployed, gear_retrieved, haul_started,
+            haul_complete, anchor_drop, anchor_raise, manual_alert, crew_note,
+            catch_logged)
+        crew:
+            Crew member identifier (name, ID, or role)
+        message:
+            Human-readable description of the operation
+        metadata:
+            Optional structured data (gear type, location, quantities, etc.)
+        ts:
+            Timestamp (None for now, datetime, epoch seconds, or ISO string)
+
+        Returns
+        -------
+        dict
+            The logged record as written (including generated fields like _seq
+            and _loggedAt).
+
+        Example
+        -------
+        >>> await twin.log_crew_action(
+        ...     "gear_deployed",
+        ...     "captain",
+        ...     "Deployed cod pot gear at 59.5N, -152.3W",
+        ...     {"gear_type": "cod_pot", "count": 50, "lat": 59.5, "lon": -152.3}
+        ... )
+        """
+        return await self.oplog.log_entry(
+            entry_type,
+            crew,
+            message,
+            metadata,
+            ts=ts,
+        )
+
+    async def query_oplog(
+        self,
+        *,
+        entry_type: str | set[str] | None = None,
+        crew: str | set[str] | None = None,
+        start_time: Any = None,
+        end_time: Any = None,
+        limit: int = 1000,
+        offset: int = 0,
+    ) -> list[dict[str, Any]]:
+        """Query the operations log with filters.
+
+        Parameters
+        ----------
+        entry_type:
+            Filter by entry type (string or set). None = all types.
+        crew:
+            Filter by crew member (string or set). None = all crew.
+        start_time:
+            Filter entries after this time. Accepts datetime, epoch seconds, or ISO string.
+        end_time:
+            Filter entries before this time. Accepts datetime, epoch seconds, or ISO string.
+        limit:
+            Maximum number of entries to return. Default 1000.
+        offset:
+            Number of entries to skip (for pagination). Default 0.
+
+        Returns
+        -------
+        list[dict]
+            List of matching records, ordered by timestamp (newest first).
+        """
+        return await self.oplog.query(
+            entry_type=entry_type,
+            crew=crew,
+            start_time=start_time,
+            end_time=end_time,
+            limit=limit,
+            offset=offset,
+        )
+
+    async def export_oplog(
+        self,
+        format: str = "json",
+        *,
+        entry_type: str | set[str] | None = None,
+        crew: str | set[str] | None = None,
+        start_time: Any = None,
+        end_time: Any = None,
+        limit: int = 1000,
+    ) -> str:
+        """Export the operations log to specified format.
+
+        Parameters
+        ----------
+        format:
+            Export format: 'json', 'csv', or 'text'. Default 'json'.
+        entry_type, crew, start_time, end_time, limit:
+            Same filters as query_oplog().
+
+        Returns
+        -------
+        str
+            Exported data in requested format.
+        """
+        return await self.oplog.export(
+            format=format,
+            entry_type=entry_type,
+            crew=crew,
+            start_time=start_time,
+            end_time=end_time,
+            limit=limit,
+        )
+
 
     def handle_packet(self, packet: dict[str, Any]) -> None:
         """Apply one TelemetryPacket to state and, if a sounding, the grid."""

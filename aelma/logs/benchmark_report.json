@@ -1,0 +1,71 @@
+{
+  "suite": "aelma-benchmarks",
+  "generated_at_unix": 1785228160.1906135,
+  "python_version": "3.14.3",
+  "summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "all_passed": true
+  },
+  "benchmarks": [
+    {
+      "name": "nmea_parsing",
+      "unit": "sentences",
+      "iterations": 4000,
+      "repeats": 3,
+      "ops_per_sec": 476457.06447131623,
+      "best_ops_per_sec": 484466.78346503404,
+      "avg_ms_per_op": 0.0020988250034861267,
+      "baseline_ops_per_sec": 1000.0,
+      "passed": true,
+      "details": {
+        "sentence_types": 6
+      }
+    },
+    {
+      "name": "watcher_evaluation",
+      "unit": "evaluations",
+      "iterations": 4000,
+      "repeats": 3,
+      "ops_per_sec": 640748.3932577893,
+      "best_ops_per_sec": 649920.3840143223,
+      "avg_ms_per_op": 0.0015606750021106564,
+      "baseline_ops_per_sec": 1000.0,
+      "passed": true,
+      "details": {
+        "rules_registered": 6
+      }
+    },
+    {
+      "name": "telemetry_filter",
+      "unit": "records",
+      "iterations": 10000,
+      "repeats": 3,
+      "ops_per_sec": 484949.58946622873,
+      "best_ops_per_sec": 507017.1174812362,
+      "avg_ms_per_op": 0.0020620700001018123,
+      "baseline_ops_per_sec": 1000.0,
+      "passed": true,
+      "details": {
+        "log_records": 5000,
+        "scans_per_run": 2
+      }
+    },
+    {
+      "name": "a2a_aggregations",
+      "unit": "records",
+      "iterations": 8000,
+      "repeats": 3,
+      "ops_per_sec": 198610.71795785124,
+      "best_ops_per_sec": 204437.3118338533,
+      "avg_ms_per_op": 0.005034975001763087,
+      "baseline_ops_per_sec": 1000.0,
+      "passed": true,
+      "details": {
+        "log_records": 2000,
+        "aggregations_per_run": 4
+      }
+    }
+  ]
+}

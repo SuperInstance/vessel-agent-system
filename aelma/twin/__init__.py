@@ -8,6 +8,7 @@ from .bathymetry import BathymetryGrid
 from .circuit_breaker import CircuitBreaker, CircuitBreakerOpen, State
 from .core import TwinCore
 from .llm_narrator import Narrator
+from .plugins import Plugin, PluginContext, PluginManager
 from .state import VesselState, bearing_deg, haversine_m
 from .stratified_sampler import SampleBin, StratifiedSampler, TrainingExample
 from .watcher_history import WatcherHistory
@@ -26,6 +27,9 @@ __all__ = [
     "CircuitBreaker",
     "CircuitBreakerOpen",
     "Narrator",
+    "Plugin",
+    "PluginContext",
+    "PluginManager",
     "SampleBin",
     "State",
     "StratifiedSampler",
