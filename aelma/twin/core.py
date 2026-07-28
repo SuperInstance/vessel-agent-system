@@ -110,7 +110,7 @@ class TwinCore:
         )
         self.metrics.register_gauge(MEMORY_BYTES, "Process resident memory in bytes.")
         self.metrics.register_histogram(
-            PACKET_HANDLING_SECONDS, "Time spent applying one telemetry packet."
+            PACKET_HANDLING_SECONDS, help="Time spent applying one telemetry packet."
         )
 
     # ------------------------------------------------------------------ #

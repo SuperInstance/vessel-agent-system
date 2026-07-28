@@ -38,7 +38,8 @@
       "Bash(echo:*)",
       "Bash(timeout 5s curl:*)",
       "Bash(pkill:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(timeout 20 python -m pytest:*)"
     ]
   }
 }

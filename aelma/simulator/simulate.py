@@ -272,5 +272,18 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
+def iter_sentences(duration_min: float = 3.0, seed: int = 42, speedup: float = 30.0):
+    """Generate NMEA sentences for testing without TCP connection.
+
+    Yields NMEA sentences one by one, compatible with test harness.
+    """
+    duration_sec = max(0.0, duration_min * 60.0)
+    state = _initial_state(duration_sec, seed)
+    rng = random.Random(seed)
+
+    while state["elapsed"] < duration_sec:
+        for sentence in build_sentences(state, rng):
+            yield sentence
+
 if __name__ == "__main__":
     sys.exit(main())
