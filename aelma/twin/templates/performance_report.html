@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{spec[title]}</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 40px; }}
+        h1 {{ color: #2c3e50; }}
+        h2 {{ color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; }}
+        table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
+        th, td {{ border: 1px solid #ddd; padding: 12px; text-align: left; }}
+        th {{ background-color: #3498db; color: white; }}
+        tr:nth-child(even) {{ background-color: #f2f2f2; }}
+        .summary {{ background-color: #ecf0f1; padding: 20px; border-radius: 5px; margin: 20px 0; }}
+        .metric {{ display: inline-block; margin: 10px; padding: 15px; background-color: #3498db; color: white; border-radius: 5px; min-width: 150px; }}
+        .metric-value {{ font-size: 2em; font-weight: bold; }}
+        .metric-label {{ font-size: 0.9em; opacity: 0.9; }}
+        .chart {{ background-color: #ecf0f1; height: 400px; margin: 20px 0; display: flex; align-items: center; justify-content: center; border-radius: 5px; }}
+    </style>
+</head>
+<body>
+    <h1>{spec[title]}</h1>
+    <div class="summary">
+        <p><strong>Period:</strong> {spec[start_time]} to {spec[end_time]}</p>
+    </div>
+
+    <h2>Performance Metrics</h2>
+    <div class="metric">
+        <div class="metric-value">{metrics[fuel_efficiency]}</div>
+        <div class="metric-label">L/hr</div>
+    </div>
+    <div class="metric">
+        <div class="metric-value">{metrics[average_speed]}</div>
+        <div class="metric-label">knots</div>
+    </div>
+    <div class="metric">
+        <div class="metric-value">{metrics[cpue]}</div>
+        <div class="metric-label">kg/pot</div>
+    </div>
+
+    <h2>Fuel Consumption</h2>
+    <div class="chart">Chart Placeholder</div>
+
+    <h2>Speed Profile</h2>
+    <div class="chart">Chart Placeholder</div>
+
+    <h2>Catch Rates</h2>
+    <div class="chart">Chart Placeholder</div>
+</body>
+</html>

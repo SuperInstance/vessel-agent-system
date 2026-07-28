@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{spec[title]}</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 40px; }}
+        h1 {{ color: #2c3e50; }}
+        h2 {{ color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; }}
+        table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
+        th, td {{ border: 1px solid #ddd; padding: 12px; text-align: left; }}
+        th {{ background-color: #3498db; color: white; }}
+        tr:nth-child(even) {{ background-color: #f2f2f2; }}
+        .summary {{ background-color: #ecf0f1; padding: 20px; border-radius: 5px; margin: 20px 0; }}
+        .stat {{ display: inline-block; margin: 10px; padding: 10px; background-color: #3498db; color: white; border-radius: 3px; }}
+        .chart-placeholder {{ background-color: #ecf0f1; height: 300px; margin: 20px 0; display: flex; align-items: center; justify-content: center; border-radius: 5px; }}
+    </style>
+</head>
+<body>
+    <h1>{spec[title]}</h1>
+    <div class="summary">
+        <p><strong>Vessel:</strong> {spec[vessel_id]}</p>
+        <p><strong>Period:</strong> {spec[start_time]} to {spec[end_time]}</p>
+    </div>
+
+    <h2>Trip Summary</h2>
+    <div class="summary">
+        <p>Total Catch: <strong>{statistics[catch][total_weight_kg]} kg</strong></p>
+        <p>Duration: <strong>{statistics[time_range][duration_hours]:.1f} hours</strong></p>
+    </div>
+
+    <h2>Catch Breakdown</h2>
+    <table>
+        <tr><th>Species</th><th>Weight (kg)</th><th>Count</th></tr>
+        <!-- Dynamic species rows -->
+    </table>
+
+    <h2>Position Track</h2>
+    <div class="chart-placeholder">Map Placeholder</div>
+
+    <h2>Depth Profile</h2>
+    <div class="chart-placeholder">Chart Placeholder</div>
+</body>
+</html>

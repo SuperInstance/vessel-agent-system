@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{spec[title]}</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 40px; }}
+        h1 {{ color: #2c3e50; }}
+        h2 {{ color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; }}
+        table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
+        th, td {{ border: 1px solid #ddd; padding: 12px; text-align: left; }}
+        th {{ background-color: #3498db; color: white; }}
+        tr:nth-child(even) {{ background-color: #f2f2f2; }}
+        .summary {{ background-color: #ecf0f1; padding: 20px; border-radius: 5px; margin: 20px 0; }}
+        .vessel-card {{ background-color: #ffffff; border: 2px solid #3498db; padding: 20px; margin: 20px 0; border-radius: 5px; }}
+        .chart {{ background-color: #ecf0f1; height: 400px; margin: 20px 0; display: flex; align-items: center; justify-content: center; border-radius: 5px; }}
+    </style>
+</head>
+<body>
+    <h1>{spec[title]}</h1>
+    <div class="summary">
+        <p><strong>Period:</strong> {spec[start_time]} to {spec[end_time]}</p>
+        <p><strong>Vessels:</strong> {fleet[vessel_count]}</p>
+    </div>
+
+    <h2>Fleet Overview</h2>
+    <table>
+        <tr><th>Vessel</th><th>Status</th><th>Last Position</th><th>Catch (kg)</th></tr>
+        <!-- Dynamic vessel rows -->
+    </table>
+
+    <h2>Performance Comparison</h2>
+    <div class="chart">Chart Placeholder</div>
+
+    <h2>Individual Vessel Reports</h2>
+    <!-- Dynamic vessel cards -->
+    <div class="vessel-card">
+        <h3>Vessel Name</h3>
+        <table>
+            <tr><th>Metric</th><th>Value</th></tr>
+            <tr><td>Fuel Efficiency</td><td>-- L/hr</td></tr>
+            <tr><td>Catch Total</td><td>-- kg</td></tr>
+            <tr><td>Engine Hours</td><td>-- hr</td></tr>
+        </table>
+    </div>
+
+    <h2>Best Practices</h2>
+    <table>
+        <tr><th>Practice</th><th>Vessel</th><th>Improvement</th></tr>
+        <!-- Dynamic best practice rows -->
+    </table>
+</body>
+</html>

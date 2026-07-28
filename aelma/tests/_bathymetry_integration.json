@@ -4,8 +4,8 @@
       "lat": 56.80135135135135,
       "lon": -135.30292275146516,
       "depth_m": 70.0,
-      "sample_count": 78,
-      "last_sample_ns": 1785266168144579900,
+      "sample_count": 90,
+      "last_sample_ns": 1785273068104528800,
       "source": "sounder"
     }
   ]

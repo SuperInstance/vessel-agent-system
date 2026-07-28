@@ -35,7 +35,9 @@ from .metrics import (
     MetricsCollector,
     serve_metrics,
 )
+from .mob_detector import MOBDetector
 from .oplog import OpLog
+from .quota_manager import QuotaManager
 from .state import VesselState
 
 log = logging.getLogger("aelma.twin")
@@ -79,6 +81,10 @@ class TwinCore:
         jepa_learning_rate: float = 0.1,
         jepa_anomaly_threshold: float = 2.5,
         jepa_min_samples: int = 10,
+        quota_path: str | Path = "quota",
+        quota_enabled: bool = True,
+        mob_events_path: str | Path = "mob_events.jsonl",
+        enable_mob: bool = True,
     ) -> None:
         """Configure the twin; nothing connects until :meth:`run` is awaited."""
         self.bridge_url = bridge_url
@@ -91,6 +97,9 @@ class TwinCore:
         self.a2a_log_path = Path(a2a_log_path)
         self.oplog_path = Path(oplog_path)
         self.metrics_port = metrics_port
+        self.quota_path = Path(quota_path)
+        self.quota_enabled = quota_enabled
+        self.mob_events_path = Path(mob_events_path)
 
         self.state = VesselState()
         self.bathymetry = BathymetryGrid()
@@ -133,6 +142,12 @@ class TwinCore:
             anomaly_threshold=jepa_anomaly_threshold,
             min_samples=jepa_min_samples,
         ) if enable_jepa else None
+
+        # Quota manager for commercial fishing quota tracking
+        self.quota = QuotaManager(
+            storage_path=self.quota_path if quota_enabled else None,
+            vessel_id=vessel_id,
+        ) if quota_enabled else None
 
     # ------------------------------------------------------------------ #
     # Packet handling
