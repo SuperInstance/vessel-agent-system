@@ -29,6 +29,7 @@ from .bathymetry import BathymetryGrid
 from .fishing_modes import FishingMode, FishingModeManager
 from .state import VesselState
 from .trip_summary import TripSummary
+from .weather import WeatherClient, MockWeatherClient
 
 log = logging.getLogger("aelma.twin")
 
@@ -337,6 +338,11 @@ class TwinCore:
         enable_telemetry_log: bool = True,
         enable_watchers: bool = True,
         default_cooldown_s: float = 30.0,
+        enable_weather: bool = True,
+        weather_api_key: str | None = None,
+        weather_provider: str = "openweather",
+        weather_cache_ttl_s: int = 900,
+        use_mock_weather: bool = False,
     ) -> None:
         """Configure the twin; nothing connects until :meth:`run` is awaited.
 
@@ -352,6 +358,11 @@ class TwinCore:
             enable_telemetry_log: Whether to log telemetry packets to JSONL.
             enable_watchers: Whether to enable watcher rule evaluation.
             default_cooldown_s: Default cooldown for watcher rules in seconds.
+            enable_weather: Whether to enable weather integration.
+            weather_api_key: API key for weather service (OpenWeatherMap or NOAA).
+            weather_provider: Weather provider ("openweather" or "noaa").
+            weather_cache_ttl_s: Weather cache TTL in seconds (default 900 = 15 min).
+            use_mock_weather: Use mock weather client for testing.
         """
         self.bridge_url = bridge_url
         self.viewer_port = viewer_port
@@ -364,6 +375,8 @@ class TwinCore:
         self.enable_telemetry_log = enable_telemetry_log
         self.enable_watchers = enable_watchers
         self.default_cooldown_s = default_cooldown_s
+        self.enable_weather = enable_weather
+        self.weather_cache_ttl_s = weather_cache_ttl_s
 
         self.state = VesselState()
         self.bathymetry = BathymetryGrid()
@@ -371,6 +384,34 @@ class TwinCore:
         self.trip_summary = TripSummary(vessel_id=vessel_id)
         self._viewers: set[Any] = set()
         self._telemetry_log_file: Any | None = None
+
+        # Weather client and cached data
+        self._weather_client: WeatherClient | MockWeatherClient | None = None
+        self._weather_conditions: dict[str, Any] | None = None
+        self._weather_forecasts: list[dict[str, Any]] = []
+        self._weather_alerts: list[dict[str, Any]] = []
+        self._last_weather_fetch_ns: int = 0
+        self._weather_fetch_interval_ns = 15 * 60 * 1_000_000_000  # 15 minutes
+
+        # Initialize weather client if enabled
+        if enable_weather:
+            if use_mock_weather:
+                self._weather_client = MockWeatherClient(cache_ttl_s=weather_cache_ttl_s)
+                log.info("Initialized mock weather client")
+            elif weather_api_key:
+                if weather_provider == "noaa":
+                    self._weather_client = WeatherClient(
+                        noaa_api_key=weather_api_key,
+                        cache_ttl_s=weather_cache_ttl_s,
+                    )
+                else:  # openweather (default)
+                    self._weather_client = WeatherClient(
+                        openweather_api_key=weather_api_key,
+                        cache_ttl_s=weather_cache_ttl_s,
+                    )
+                log.info("Initialized %s weather client", weather_provider)
+            else:
+                log.warning("Weather enabled but no API key provided; weather will not be fetched")
 
         # Initialize watcher system
         self._watcher_history = WatcherHistory(default_cooldown_s=default_cooldown_s)
@@ -577,6 +618,100 @@ class TwinCore:
             "cooldown_s": 60.0,
         })
 
+        # ------------------------------------------------------------------
+        # Weather alert watcher rules
+        # ------------------------------------------------------------------
+
+        # High wind warning
+        self._watchers.add({
+            "id": "high-wind-warning",
+            "name": "High wind warning",
+            "when": lambda f: f.get("wind_speed_kn", 0) >= 34,  # Gale force
+            "action": {
+                "name": "raise_alert",
+                "payload": lambda f: {
+                    "severity": "warning",
+                    "code": "HIGH_WIND",
+                    "message": f"High winds: {f['wind_speed_kn']:.1f}kn"
+                },
+                "reason": lambda f: f"wind={f['wind_speed_kn']:.1f}kn",
+                "priority": lambda f: 0.80,
+            },
+            "cooldown_s": 60.0,
+        })
+
+        # Storm warning
+        self._watchers.add({
+            "id": "storm-warning",
+            "name": "Storm warning",
+            "when": lambda f: f.get("wind_speed_kn", 0) >= 48,  # Storm force
+            "action": {
+                "name": "raise_alert",
+                "payload": lambda f: {
+                    "severity": "critical",
+                    "code": "STORM_WARNING",
+                    "message": f"STORM WARNING: {f['wind_speed_kn']:.1f}kn winds"
+                },
+                "reason": lambda f: f"wind={f['wind_speed_kn']:.1f}kn",
+                "priority": lambda f: 0.95,
+            },
+            "cooldown_s": 30.0,
+        })
+
+        # Rough seas warning
+        self._watchers.add({
+            "id": "rough-seas-warning",
+            "name": "Rough seas warning",
+            "when": lambda f: f.get("wave_height_m", 0) >= 2.5,
+            "action": {
+                "name": "raise_alert",
+                "payload": lambda f: {
+                    "severity": "warning",
+                    "code": "ROUGH_SEAS",
+                    "message": f"Rough seas: {f['wave_height_m']:.1f}m waves"
+                },
+                "reason": lambda f: f"waves={f['wave_height_m']:.1f}m",
+                "priority": lambda f: 0.75,
+            },
+            "cooldown_s": 60.0,
+        })
+
+        # Poor visibility warning
+        self._watchers.add({
+            "id": "poor-visibility-warning",
+            "name": "Poor visibility warning",
+            "when": lambda f: f.get("visibility_m", 10000) < 2000,  # < 2km
+            "action": {
+                "name": "raise_alert",
+                "payload": lambda f: {
+                    "severity": "warning",
+                    "code": "POOR_VISIBILITY",
+                    "message": f"Poor visibility: {f['visibility_m']/1000:.1f}km"
+                },
+                "reason": lambda f: f"visibility={f['visibility_m']:.0f}m",
+                "priority": lambda f: 0.70,
+            },
+            "cooldown_s": 45.0,
+        })
+
+        # Rapid weather deterioration
+        self._watchers.add({
+            "id": "weather-deterioration",
+            "name": "Weather deterioration warning",
+            "when": lambda f: f.get("weather_category") == "hazardous",
+            "action": {
+                "name": "raise_alert",
+                "payload": lambda f: {
+                    "severity": "warning",
+                    "code": "WEATHER_DETERIORATION",
+                    "message": f"Weather deteriorating - seek shelter"
+                },
+                "reason": lambda f: f"weather={f.get('weather_category', 'unknown')}",
+                "priority": lambda f: 0.85,
+            },
+            "cooldown_s": 90.0,
+        })
+
         log.info("registered %d default watcher rules", len(self._watchers))
 
     def _build_frame(self) -> dict[str, Any]:
@@ -607,6 +742,10 @@ class TwinCore:
 
         # Add fishing mode context
         frame.update(self.fishing_modes.get_context_for_watchers())
+
+        # Add weather data if available
+        if self._weather_conditions:
+            frame.update(self._weather_conditions)
 
         return frame
 
@@ -846,6 +985,70 @@ class TwinCore:
     # ------------------------------------------------------------------ #
     # Packet handling
     # ------------------------------------------------------------------ #
+
+    async def _fetch_weather_async(self, lat: float, lon: float) -> None:
+        """Async fetch weather and update cached weather data."""
+        if self._weather_client is None:
+            return
+
+        try:
+            # Fetch current conditions
+            conditions = await self._weather_client.get_current_conditions(lat, lon)
+            self._weather_conditions = {
+                "wind_speed_kn": conditions.wind.speed_kn,
+                "wind_direction_deg": conditions.wind.direction_deg,
+                "wave_height_m": conditions.wave.height_m,
+                "visibility_m": conditions.visibility_m,
+                "air_temp_c": conditions.air_temp_c,
+                "pressure_hpa": conditions.pressure_hpa,
+                "weather_condition": conditions.description,
+                "weather_category": self._assess_weather_category(conditions),
+            }
+
+            # Fetch forecasts
+            forecasts, alerts = await self._weather_client.fetch_forecast(lat, lon, hours_ahead=24)
+            self._weather_forecasts = [
+                {
+                    "valid_ns": f.valid_ns,
+                    "wind_speed_kn": f.wind.speed_kn,
+                    "wind_direction_deg": f.wind.direction_deg,
+                    "wave_height_m": f.wave.height_m,
+                    "visibility_m": f.visibility_m,
+                    "air_temp_c": f.air_temp_c,
+                    "description": f.description,
+                }
+                for f in forecasts[:8]  # Limit to 8 forecast points (24h)
+            ]
+            self._weather_alerts = [
+                {
+                    "severity": a.severity,
+                    "title": a.title,
+                    "description": a.description,
+                    "onset_ns": a.onset_ns,
+                    "expiry_ns": a.expiry_ns,
+                }
+                for a in alerts
+            ]
+
+            log.info(
+                "Weather updated: %s, %.1fkn wind, %.1fm waves, %d alerts",
+                conditions.description,
+                conditions.wind.speed_kn,
+                conditions.wave.height_m,
+                len(alerts),
+            )
+        except Exception as exc:
+            log.warning("weather fetch failed: %s", exc)
+
+    def _assess_weather_category(self, conditions) -> str:
+        """Assess overall weather category for watcher evaluation."""
+        from .weather import assess_weather_conditions
+        category, _ = assess_weather_conditions(
+            conditions.wind.speed_kn,
+            conditions.wave.height_m,
+            conditions.visibility_m,
+        )
+        return category
     def handle_packet(self, packet: dict[str, Any]) -> None:
         """Apply one TelemetryPacket to state and, if a sounding, the grid.
 
@@ -865,6 +1068,18 @@ class TwinCore:
 
         # Apply to vessel state
         self.state.apply_packet(packet)
+
+        # Auto-fetch weather on position updates
+        if self.enable_weather and self._weather_client is not None:
+            if packet.get("channel") in ("position.lat", "position.lon"):
+                now_ns = time.time_ns()
+                if (now_ns - self._last_weather_fetch_ns) >= self._weather_fetch_interval_ns:
+                    if self.state.lat is not None and self.state.lon is not None:
+                        # Schedule async weather fetch
+                        asyncio.create_task(self._fetch_weather_async(
+                            self.state.lat, self.state.lon
+                        ))
+                        self._last_weather_fetch_ns = now_ns
 
         # Evaluate watcher rules on the updated state
         if self.enable_watchers:
@@ -919,6 +1134,15 @@ class TwinCore:
         }
         # Add fishing mode information
         snap["fishing_mode"] = self.fishing_modes.get_mode()
+
+        # Add weather information if available
+        if self.enable_weather and self._weather_conditions:
+            snap["weather"] = {
+                "conditions": self._weather_conditions,
+                "forecasts": self._weather_forecasts,
+                "alerts": self._weather_alerts,
+            }
+
         return snap
 
     # ------------------------------------------------------------------ #
@@ -1016,3 +1240,6 @@ class TwinCore:
                 )
         finally:
             self._close_telemetry_log()
+            if self._weather_client is not None:
+                await self._weather_client.close()
+                log.info("weather client closed")

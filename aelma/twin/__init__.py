@@ -12,6 +12,7 @@ from .core import TwinCore
 from .fleet_manager import FleetManager, VesselInstance
 from .fleet_server import FleetServer
 from .gear_tracker import GearTracker
+from .h3_index import H3Index
 from .llm_narrator import Narrator
 from .plugins import Plugin, PluginContext, PluginManager
 from .route_optimizer import RouteOptimizer
@@ -37,6 +38,7 @@ __all__ = [
     "CircuitBreaker",
     "CircuitBreakerOpen",
     "GearTracker",
+    "H3Index",
     "Narrator",
     "Plugin",
     "PluginContext",
