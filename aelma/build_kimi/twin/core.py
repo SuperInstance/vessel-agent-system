@@ -28,6 +28,7 @@ import websockets
 from .bathymetry import BathymetryGrid
 from .fishing_modes import FishingMode, FishingModeManager
 from .state import VesselState
+from .tide_predictor import TidePredictor
 from .trip_summary import TripSummary
 from .weather import WeatherClient, MockWeatherClient
 
@@ -343,6 +344,9 @@ class TwinCore:
         weather_provider: str = "openweather",
         weather_cache_ttl_s: int = 900,
         use_mock_weather: bool = False,
+        enable_tide_prediction: bool = True,
+        tide_amplitude_m: float = 2.0,
+        tide_datum_mllw_m: float = 0.0,
     ) -> None:
         """Configure the twin; nothing connects until :meth:`run` is awaited.
 
@@ -363,6 +367,9 @@ class TwinCore:
             weather_provider: Weather provider ("openweather" or "noaa").
             weather_cache_ttl_s: Weather cache TTL in seconds (default 900 = 15 min).
             use_mock_weather: Use mock weather client for testing.
+            enable_tide_prediction: Whether to enable tide prediction.
+            tide_amplitude_m: Base tidal amplitude in meters (default 2.0m).
+            tide_datum_mllw_m: MLLW datum offset in meters (default 0.0).
         """
         self.bridge_url = bridge_url
         self.viewer_port = viewer_port
@@ -377,6 +384,7 @@ class TwinCore:
         self.default_cooldown_s = default_cooldown_s
         self.enable_weather = enable_weather
         self.weather_cache_ttl_s = weather_cache_ttl_s
+        self.enable_tide_prediction = enable_tide_prediction
 
         self.state = VesselState()
         self.bathymetry = BathymetryGrid()
@@ -412,6 +420,16 @@ class TwinCore:
                 log.info("Initialized %s weather client", weather_provider)
             else:
                 log.warning("Weather enabled but no API key provided; weather will not be fetched")
+
+        # Initialize tide predictor if enabled
+        if enable_tide_prediction:
+            self.tide_predictor = TidePredictor(
+                base_amplitude=tide_amplitude_m,
+                datum_mllw_m=tide_datum_mllw_m,
+            )
+            log.info("Initialized tide predictor with amplitude=%.1fm", tide_amplitude_m)
+        else:
+            self.tide_predictor = None
 
         # Initialize watcher system
         self._watcher_history = WatcherHistory(default_cooldown_s=default_cooldown_s)
@@ -712,6 +730,47 @@ class TwinCore:
             "cooldown_s": 90.0,
         })
 
+        # ------------------------------------------------------------------
+        # Tide alert watcher rules
+        # ------------------------------------------------------------------
+
+        # Low water alert (tide approaching low water)
+        if self.enable_tide_prediction and self.tide_predictor is not None:
+            self._watchers.add({
+                "id": "low-water-alert",
+                "name": "Low water alert",
+                "when": lambda f: self._check_low_water_condition(f),
+                "action": {
+                    "name": "raise_alert",
+                    "payload": lambda f: {
+                        "severity": "warning",
+                        "code": "LOW_WATER",
+                        "message": f"Low water approaching: tide={f.get('tide_level_m', 0):.2f}m MLLW"
+                    },
+                    "reason": lambda f: f"tide={f.get('tide_level_m', 0):.2f}m",
+                    "priority": lambda f: 0.75,
+                },
+                "cooldown_s": 300.0,  # 5 minutes - longer cooldown for tide changes
+            })
+
+            # Depth clearance warning (tide-aware)
+            self._watchers.add({
+                "id": "tide-depth-clearance",
+                "name": "Tide-aware depth clearance",
+                "when": lambda f: self._check_tide_depth_clearance(f),
+                "action": {
+                    "name": "raise_alert",
+                    "payload": lambda f: {
+                        "severity": "warning",
+                        "code": "TIDE_DEPTH_CLEARANCE",
+                        "message": f"Reduced clearance at low tide: {f.get('water_depth_m', 0):.2f}m"
+                    },
+                    "reason": lambda f: f"water_depth={f.get('water_depth_m', 0):.2f}m",
+                    "priority": lambda f: 0.82,
+                },
+                "cooldown_s": 180.0,  # 3 minutes
+            })
+
         log.info("registered %d default watcher rules", len(self._watchers))
 
     def _build_frame(self) -> dict[str, Any]:
@@ -747,7 +806,56 @@ class TwinCore:
         if self._weather_conditions:
             frame.update(self._weather_conditions)
 
+        # Add tide data if available
+        if self.enable_tide_prediction and self.tide_predictor is not None:
+            if self.state.lat is not None and self.state.lon is not None:
+                from datetime import datetime, timezone
+                current_time = datetime.now(timezone.utc)
+                tide_pred = self.tide_predictor.predict_tide(
+                    self.state.lat, self.state.lon, current_time
+                )
+                frame["tide_level_m"] = tide_pred.water_level_m
+                frame["tide_confidence"] = tide_pred.confidence
+
+                # Get next high/low tides
+                next_tides = self.tide_predictor.get_next_high_low_tides(
+                    self.state.lat, self.state.lon, current_time
+                )
+                frame["next_high_tide"] = next_tides.get("next_high_tide")
+                frame["next_low_tide"] = next_tides.get("next_low_tide")
+
+                # Calculate water depth including tide (if depth_m is available)
+                if "depth_m" in frame:
+                    frame["water_depth_m"] = frame["depth_m"] + tide_pred.water_level_m
+
         return frame
+
+    def _check_low_water_condition(self, frame: dict[str, Any]) -> bool:
+        """Check if tide is approaching low water (< 0.5m from low tide)."""
+        if not self.enable_tide_prediction or self.tide_predictor is None:
+            return False
+
+        tide_level = frame.get("tide_level_m")
+        if tide_level is None:
+            return False
+
+        # Check if tide is low (below -0.5m relative to MLLW)
+        return tide_level < -0.5
+
+    def _check_tide_depth_clearance(self, frame: dict[str, Any]) -> bool:
+        """Check if depth clearance is reduced at low tide.
+
+        Warns if water depth (chart depth + tide) is less than 3m.
+        """
+        if not self.enable_tide_prediction or self.tide_predictor is None:
+            return False
+
+        water_depth = frame.get("water_depth_m")
+        if water_depth is None:
+            return False
+
+        # Check if water depth is getting shallow
+        return water_depth < 3.0
 
     def _on_watcher_fired(self, action: dict[str, Any]) -> None:
         """Handle a fired watcher action by broadcasting to viewers.
@@ -1141,6 +1249,23 @@ class TwinCore:
                 "conditions": self._weather_conditions,
                 "forecasts": self._weather_forecasts,
                 "alerts": self._weather_alerts,
+            }
+
+        # Add tide prediction if available
+        if self.enable_tide_prediction and self.tide_predictor and lat != 0.0 and lon != 0.0:
+            from datetime import datetime, timezone
+            current_time = datetime.fromtimestamp(now_ns / 1e9, tz=timezone.utc)
+            tide_prediction = self.tide_predictor.predict_tide(lat, lon, current_time)
+
+            # Get next high/low tides
+            next_tides = self.tide_predictor.get_next_high_low_tides(lat, lon, current_time)
+
+            snap["tide"] = {
+                "current_level_m": tide_prediction.water_level_m,
+                "timestamp": tide_prediction.timestamp.isoformat(),
+                "confidence": tide_prediction.confidence,
+                "next_high_tide": next_tides.get("next_high_tide"),
+                "next_low_tide": next_tides.get("next_low_tide"),
             }
 
         return snap
