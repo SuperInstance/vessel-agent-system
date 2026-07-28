@@ -26,6 +26,7 @@ from typing import Any
 import websockets
 
 from .bathymetry import BathymetryGrid
+from .fishing_modes import FishingMode, FishingModeManager
 from .state import VesselState
 
 log = logging.getLogger("aelma.twin")
@@ -365,6 +366,7 @@ class TwinCore:
 
         self.state = VesselState()
         self.bathymetry = BathymetryGrid()
+        self.fishing_modes = FishingModeManager(initial_mode=FishingMode.TRANSIT)
         self._viewers: set[Any] = set()
         self._telemetry_log_file: Any | None = None
 
@@ -443,6 +445,136 @@ class TwinCore:
             "cooldown_s": 20.0,
         })
 
+        # ------------------------------------------------------------------
+        # Mode-specific watcher rules
+        # ------------------------------------------------------------------
+
+        # TRANSIT mode: Speed warning
+        self._watchers.add({
+            "id": "transit-speed-excessive",
+            "name": "Transit speed excessive",
+            "when": lambda f: f.get("fishing_mode") == "TRANSIT" and f.get("speed_kn", 0) > 15.0,
+            "action": {
+                "name": "raise_alert",
+                "payload": lambda f: {
+                    "severity": "warning",
+                    "code": "TRANSIT_SPEED_HIGH",
+                    "message": f"Transit speed high: {f['speed_kn']:.1f}kn"
+                },
+                "reason": lambda f: f"speed={f['speed_kn']:.1f}kn in TRANSIT",
+                "priority": lambda f: 0.70,
+            },
+            "cooldown_s": 60.0,
+        })
+
+        # FISHING mode: Depth critical
+        self._watchers.add({
+            "id": "fishing-depth-critical",
+            "name": "Fishing depth critical",
+            "when": lambda f: f.get("fishing_mode") == "FISHING" and 0 < f.get("depth_m", 999) < 5.0,
+            "action": {
+                "name": "raise_alert",
+                "payload": lambda f: {
+                    "severity": "warning",
+                    "code": "FISHING_DEPTH_CRITICAL",
+                    "message": f"Depth critical while fishing: {f['depth_m']:.2f}m"
+                },
+                "reason": lambda f: f"depth={f['depth_m']:.2f}m in FISHING",
+                "priority": lambda f: 0.80,
+            },
+            "cooldown_s": 30.0,
+        })
+
+        # FISHING mode: Gear failure
+        self._watchers.add({
+            "id": "fishing-gear-failure",
+            "name": "Fishing gear failure",
+            "when": lambda f: f.get("fishing_mode") == "FISHING" and f.get("gear_status") == "FAILURE",
+            "action": {
+                "name": "raise_alert",
+                "payload": lambda f: {
+                    "severity": "critical",
+                    "code": "GEAR_FAILURE",
+                    "message": "Fishing gear failure detected"
+                },
+                "reason": lambda f: "gear_status=FAILURE in FISHING",
+                "priority": lambda f: 0.95,
+            },
+            "cooldown_s": 10.0,
+        })
+
+        # DRIFTING mode: Drift rate excessive
+        self._watchers.add({
+            "id": "drifting-rate-excessive",
+            "name": "Drifting rate excessive",
+            "when": lambda f: f.get("fishing_mode") == "DRIFTING" and f.get("speed_kn", 0) > 2.0,
+            "action": {
+                "name": "raise_alert",
+                "payload": lambda f: {
+                    "severity": "warning",
+                    "code": "DRIFT_RATE_HIGH",
+                    "message": f"Drift rate excessive: {f['speed_kn']:.1f}kn"
+                },
+                "reason": lambda f: f"speed={f['speed_kn']:.1f}kn in DRIFTING",
+                "priority": lambda f: 0.65,
+            },
+            "cooldown_s": 45.0,
+        })
+
+        # ANCHORED mode: Anchor drag detection
+        self._watchers.add({
+            "id": "anchor-drag-detected",
+            "name": "Anchor drag detected",
+            "when": lambda f: f.get("fishing_mode") == "ANCHORED" and f.get("speed_kn", 0) > 0.5,
+            "action": {
+                "name": "raise_alert",
+                "payload": lambda f: {
+                    "severity": "critical",
+                    "code": "ANCHOR_DRAG",
+                    "message": f"Anchor drag detected: {f['speed_kn']:.1f}kn"
+                },
+                "reason": lambda f: f"speed={f['speed_kn']:.1f}kn in ANCHORED",
+                "priority": lambda f: 0.88,
+            },
+            "cooldown_s": 20.0,
+        })
+
+        # GEAR_DEPLOYED mode: Deployed too long
+        self._watchers.add({
+            "id": "gear-deployed-too-long",
+            "name": "Gear deployed too long",
+            "when": lambda f: f.get("fishing_mode") == "GEAR_DEPLOYED" and f.get("fishing_mode_duration_s", 0) > 43200,
+            "action": {
+                "name": "raise_alert",
+                "payload": lambda f: {
+                    "severity": "info",
+                    "code": "GEAR_DEPLOYED_LONG",
+                    "message": f"Gear deployed {f['fishing_mode_duration_s']/3600:.1f}h"
+                },
+                "reason": lambda f: f"duration={f['fishing_mode_duration_s']/3600:.1f}h in GEAR_DEPLOYED",
+                "priority": lambda f: 0.50,
+            },
+            "cooldown_s": 300.0,
+        })
+
+        # HAULING mode: Slow progress
+        self._watchers.add({
+            "id": "hauling-slow-progress",
+            "name": "Hauling slow progress",
+            "when": lambda f: f.get("fishing_mode") == "HAULING" and f.get("speed_kn", 0) < 1.0 and f.get("gear_tension", 0) > 50,
+            "action": {
+                "name": "raise_alert",
+                "payload": lambda f: {
+                    "severity": "warning",
+                    "code": "HAULING_SLOW",
+                    "message": f"Hauling slow: {f['speed_kn']:.1f}kn at tension {f['gear_tension']}"
+                },
+                "reason": lambda f: f"speed={f['speed_kn']:.1f}kn, tension={f['gear_tension']} in HAULING",
+                "priority": lambda f: 0.72,
+            },
+            "cooldown_s": 60.0,
+        })
+
         log.info("registered %d default watcher rules", len(self._watchers))
 
     def _build_frame(self) -> dict[str, Any]:
@@ -470,6 +602,9 @@ class TwinCore:
         for channel_name, channel_data in self.state.channels.items():
             if "value" in channel_data:
                 frame[channel_name] = channel_data["value"]
+
+        # Add fishing mode context
+        frame.update(self.fishing_modes.get_context_for_watchers())
 
         return frame
 
@@ -547,6 +682,43 @@ class TwinCore:
             A dict containing watcher registry and history stats.
         """
         return self._watchers.stats
+
+    def set_fishing_mode(self, mode: FishingMode | str, reason: str = "") -> None:
+        """Set the current fishing mode.
+
+        Args:
+            mode: New mode (FishingMode enum or string value).
+            reason: Human-readable explanation for the mode change.
+        """
+        self.fishing_modes.set_mode(mode, reason)
+        log.info("fishing mode set to %s: %s", mode, reason)
+
+    def get_fishing_mode(self) -> dict[str, Any]:
+        """Get current fishing mode and duration.
+
+        Returns:
+            Dict with current mode, duration, and reason.
+        """
+        return self.fishing_modes.get_mode()
+
+    def get_fishing_mode_history(self, limit: int | None = None) -> list[dict[str, Any]]:
+        """Get fishing mode change history.
+
+        Args:
+            limit: Maximum number of transitions to return (most recent first).
+
+        Returns:
+            List of mode transition records.
+        """
+        return self.fishing_modes.get_mode_history(limit)
+
+    def get_fishing_mode_statistics(self) -> dict[str, Any]:
+        """Get aggregate fishing mode statistics.
+
+        Returns:
+            Dict with per-mode statistics and summary information.
+        """
+        return self.fishing_modes.get_statistics()
 
     # ------------------------------------------------------------------ #
     # Telemetry logging
@@ -664,6 +836,8 @@ class TwinCore:
                 lat, lon, self.viewport_radius_m, now_ns
             ),
         }
+        # Add fishing mode information
+        snap["fishing_mode"] = self.fishing_modes.get_mode()
         return snap
 
     # ------------------------------------------------------------------ #
