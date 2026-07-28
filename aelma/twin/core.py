@@ -38,6 +38,7 @@ from .metrics import (
 from .mob_detector import MOBDetector
 from .oplog import OpLog
 from .quota_manager import QuotaManager
+from .report_generator import ReportGenerator, ReportSpec, ReportResult
 from .state import VesselState
 
 log = logging.getLogger("aelma.twin")
@@ -85,6 +86,13 @@ class TwinCore:
         quota_enabled: bool = True,
         mob_events_path: str | Path = "mob_events.jsonl",
         enable_mob: bool = True,
+        report_storage_path: str | Path = "reports",
+        report_template_path: str | Path = "twin/templates",
+        smtp_host: str | None = None,
+        smtp_port: int = 587,
+        smtp_user: str | None = None,
+        smtp_password: str | None = None,
+        smtp_from: str | None = None,
     ) -> None:
         """Configure the twin; nothing connects until :meth:`run` is awaited."""
         self.bridge_url = bridge_url
@@ -100,6 +108,8 @@ class TwinCore:
         self.quota_path = Path(quota_path)
         self.quota_enabled = quota_enabled
         self.mob_events_path = Path(mob_events_path)
+        self.report_storage_path = Path(report_storage_path)
+        self.report_template_path = Path(report_template_path)
 
         self.state = VesselState()
         self.bathymetry = BathymetryGrid()
@@ -148,6 +158,29 @@ class TwinCore:
             storage_path=self.quota_path if quota_enabled else None,
             vessel_id=vessel_id,
         ) if quota_enabled else None
+
+        # Report generator for regulatory compliance and operational analysis
+        self.reports = ReportGenerator(
+            storage_path=self.report_storage_path,
+            template_path=self.report_template_path,
+            smtp_host=smtp_host,
+            smtp_port=smtp_port,
+            smtp_user=smtp_user,
+            smtp_password=smtp_password,
+            smtp_from=smtp_from,
+        )
+
+        # Register data source callbacks with report generator
+        self.reports.register_vessel_state(self._get_vessel_state)
+        self.reports.register_bathymetry(self._get_bathymetry_data)
+        self.reports.register_a2a_query(self._query_a2a_log)
+        self.reports.register_oplog_query(self.query_oplog)
+        self.reports.register_telemetry_query(self._query_telemetry)
+
+        # MOB detector for man over board safety system
+        self.mob = MOBDetector(
+            storage_path=self.mob_events_path
+        ) if enable_mob else None
 
     # ------------------------------------------------------------------ #
     # Packet handling
@@ -314,6 +347,17 @@ class TwinCore:
             if self.jepa is not None:
                 self.jepa.train_on_packet(packet)
 
+            # Update MOB detector with position/heading/speed
+            if self.mob is not None:
+                channel = packet.get("channel")
+                if channel in ["position.lat", "position.lon", "heading_deg", "speed_kn"]:
+                    lat = self.state.lat
+                    lon = self.state.lon
+                    heading = self.state.heading_deg
+                    speed = self.state.speed_kn
+                    if lat is not None and lon is not None:
+                        self.mob.update_vessel_position(lat, lon, heading, speed)
+
             if packet.get("channel") != DEPTH_CHANNEL:
                 return
             value = packet.get("value")
@@ -392,6 +436,14 @@ class TwinCore:
         # Add JEPA world model stats if enabled
         if self.jepa is not None:
             snap["jepa"] = self.jepa.stats
+
+        # Add quota status if enabled
+        if self.quota is not None:
+            snap["quota"] = self.quota.get_quota_status()
+
+        # Add MOB status if enabled
+        if self.mob is not None:
+            snap["mob"] = self.mob.to_dict()
 
         return snap
 
@@ -516,3 +568,288 @@ class TwinCore:
             # Final save on shutdown to prevent data loss
             self.bathymetry.save(self.bathymetry_path)
             log.info("bathymetry saved on shutdown")
+
+    # ------------------------------------------------------------------ #
+    # Report generator data source callbacks
+    # ------------------------------------------------------------------ #
+    async def _get_vessel_state(self) -> dict[str, Any]:
+        """Callback for report generator to get vessel state."""
+        return self.state.snapshot(self.vessel_id, [self.viewport_radius_m])
+
+    async def _get_bathymetry_data(self) -> dict[str, Any]:
+        """Callback for report generator to get bathymetry data."""
+        return {
+            "voxel_count": self.bathymetry.total_voxels(),
+            "cells": self.bathymetry.cells_in_radius(
+                self.state.lat or 0.0,
+                self.state.lon or 0.0,
+                self.viewport_radius_m,
+                time.time_ns(),
+            ),
+        }
+
+    async def _query_a2a_log(
+        self,
+        *,
+        action: str | set[str] | None = None,
+        source: str | set[str] | None = None,
+        start_time: Any = None,
+        end_time: Any = None,
+        limit: int = 1000,
+    ) -> list[dict[str, Any]]:
+        """Callback for report generator to query A2A log."""
+        # This would need to be implemented in A2ALog
+        # For now, return empty list
+        return []
+
+    async def _query_telemetry(
+        self,
+        *,
+        channels: set[str] | None = None,
+        start_time: Any = None,
+        end_time: Any = None,
+        limit: int = 1000,
+    ) -> list[dict[str, Any]]:
+        """Callback for report generator to query telemetry history."""
+        # This would need a telemetry history system
+        # For now, return current channel values
+        if channels is None:
+            channels = set(self.state.channels.keys())
+
+        results = []
+        for channel in channels:
+            if channel in self.state.channels:
+                entry = self.state.channels[channel]
+                results.append({
+                    "channel": channel,
+                    "value": entry.get("value"),
+                    "timestamp_ns": entry.get("timestamp_ns"),
+                    "quality": entry.get("quality", "good"),
+                })
+
+        return results
+
+    # ------------------------------------------------------------------ #
+    # Report generation API
+    # ------------------------------------------------------------------ #
+    async def generate_report(self, spec: ReportSpec) -> ReportResult:
+        """Generate a report from specification.
+
+        Parameters
+        ----------
+        spec:
+            Report specification
+
+        Returns
+        -------
+        ReportResult
+            Result of report generation
+        """
+        # Set vessel_id if not specified
+        if spec.vessel_id is None:
+            spec.vessel_id = self.vessel_id
+
+        return await self.reports.generate_report(spec)
+
+    async def generate_trip_report(
+        self,
+        trip_id: str,
+        start_time: Any,
+        end_time: Any,
+        format: str = "pdf",
+    ) -> ReportResult:
+        """Generate a trip report.
+
+        Parameters
+        ----------
+        trip_id:
+            Trip identifier
+        start_time:
+            Trip start time
+        end_time:
+            Trip end time
+        format:
+            Export format (pdf, html, json, csv, xml, md)
+
+        Returns
+        -------
+        ReportResult
+        """
+        return await self.reports.generate_trip_report(trip_id, start_time, end_time, format)
+
+    async def generate_daily_report(
+        self,
+        date: Any,
+        format: str = "pdf",
+    ) -> ReportResult:
+        """Generate a daily report.
+
+        Parameters
+        ----------
+        date:
+            Date for report
+        format:
+            Export format (pdf, html, json, csv, xml, md)
+
+        Returns
+        -------
+        ReportResult
+        """
+        return await self.reports.generate_daily_report(date, format)
+
+    async def generate_catch_report(
+        self,
+        start_time: Any,
+        end_time: Any,
+        format: str = "pdf",
+    ) -> ReportResult:
+        """Generate a catch report.
+
+        Parameters
+        ----------
+        start_time:
+            Report start time
+        end_time:
+            Report end time
+        format:
+            Export format (pdf, html, json, csv, xml, md)
+
+        Returns
+        -------
+        ReportResult
+        """
+        return await self.reports.generate_catch_report(start_time, end_time, format)
+
+    def schedule_report(
+        self,
+        report_type: str,
+        title: str,
+        start_time: Any,
+        end_time: Any,
+        cron_expression: str,
+        format: str = "pdf",
+        recipient_emails: list[str] | None = None,
+    ) -> str:
+        """Schedule a report for automatic generation.
+
+        Parameters
+        ----------
+        report_type:
+            Type of report (trip, daily, catch, etc.)
+        title:
+            Report title
+        start_time:
+            Report time window start
+        end_time:
+            Report time window end
+        cron_expression:
+            Cron expression for scheduling (e.g., "0 6 * * *" for daily at 6am)
+        format:
+            Export format
+        recipient_emails:
+            Optional email recipients
+
+        Returns
+        -------
+        str
+            Schedule ID
+        """
+        spec = ReportSpec(
+            report_type=report_type,
+            title=title,
+            start_time=start_time,
+            end_time=end_time,
+            format=format,
+            vessel_id=self.vessel_id,
+            recipient_emails=recipient_emails,
+        )
+
+        return self.reports.schedule_report(spec, cron_expression)
+
+    def cancel_schedule(self, schedule_id: str) -> bool:
+        """Cancel a scheduled report.
+
+        Parameters
+        ----------
+        schedule_id:
+            Schedule ID to cancel
+
+        Returns
+        -------
+        bool
+            True if cancelled, False if not found
+        """
+        return self.reports.cancel_schedule(schedule_id)
+
+    def get_scheduled_reports(self) -> list[dict[str, Any]]:
+        """Get all scheduled reports.
+
+        Returns
+        -------
+        list[dict]
+            List of schedule specifications
+        """
+        return self.reports.get_scheduled_reports()
+
+    def get_report(self, report_id: str) -> ReportResult | None:
+        """Get a report by ID.
+
+        Parameters
+        ----------
+        report_id:
+            Report identifier
+
+        Returns
+        -------
+        ReportResult or None
+            Report result or None if not found
+        """
+        return self.reports.get_report(report_id)
+
+    def list_reports(
+        self,
+        report_type: str | None = None,
+        limit: int = 100,
+    ) -> list[ReportResult]:
+        """List reports with optional filter.
+
+        Parameters
+        ----------
+        report_type:
+            Filter by report type (None = all)
+        limit:
+            Maximum number of reports to return
+
+        Returns
+        -------
+        list[ReportResult]
+            List of reports, newest first
+        """
+        return self.reports.list_reports(report_type, limit)
+
+    def delete_report(self, report_id: str) -> bool:
+        """Delete a report.
+
+        Parameters
+        ----------
+        report_id:
+            Report identifier
+
+        Returns
+        -------
+        bool
+            True if deleted, False if not found
+        """
+        return self.reports.delete_report(report_id)
+
+    def register_webhook(self, url: str, report_types: list[str]) -> None:
+        """Register webhook for report notifications.
+
+        Parameters
+        ----------
+        url:
+            Webhook URL
+        report_types:
+            List of report types to trigger on
+        """
+        self.reports.register_webhook(url, report_types)
