@@ -5,9 +5,11 @@ from __future__ import annotations
 from .a2a_log import A2ALog, DEFAULT_PRIORITY, KIND_ACTION, VALID_SOURCES
 from .a2a_query import A2AQuery, KNOWN_FILTERS
 from .bathymetry import BathymetryGrid
+from .circuit_breaker import CircuitBreaker, CircuitBreakerOpen, State
 from .core import TwinCore
 from .llm_narrator import Narrator
 from .state import VesselState, bearing_deg, haversine_m
+from .stratified_sampler import SampleBin, StratifiedSampler, TrainingExample
 from .watcher_history import WatcherHistory
 from .watchers import WatcherRegistry, WatcherRule
 
@@ -21,7 +23,13 @@ __all__ = [
     "KNOWN_FILTERS",
     # Core
     "BathymetryGrid",
+    "CircuitBreaker",
+    "CircuitBreakerOpen",
     "Narrator",
+    "SampleBin",
+    "State",
+    "StratifiedSampler",
+    "TrainingExample",
     "TwinCore",
     "VesselState",
     "WatcherHistory",

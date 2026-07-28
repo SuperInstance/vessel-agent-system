@@ -23,6 +23,7 @@ import websockets
 
 from .a2a_log import A2ALog
 from .bathymetry import BathymetryGrid
+from .circuit_breaker import CircuitBreaker
 from .state import VesselState
 
 log = logging.getLogger("aelma.twin")
@@ -54,6 +55,8 @@ class TwinCore:
         a2a_log_path: str | Path = "a2a.jsonl",
         a2a_max_bytes: int | None = None,
         a2a_keep: int = 5,
+        breaker_failure_threshold: int = 5,
+        breaker_recovery_timeout: float = 30.0,
     ) -> None:
         """Configure the twin; nothing connects until :meth:`run` is awaited."""
         self.bridge_url = bridge_url
@@ -69,6 +72,13 @@ class TwinCore:
         self.bathymetry = BathymetryGrid()
         self._viewers: set[Any] = set()
         self.a2a_log = A2ALog(self.a2a_log_path, max_bytes=a2a_max_bytes, keep=a2a_keep)
+        # Protects the bridge WebSocket client from hammering a dead bridge:
+        # consecutive connect failures trip it OPEN for the recovery timeout.
+        self.bridge_breaker = CircuitBreaker(
+            name="bridge",
+            failure_threshold=breaker_failure_threshold,
+            recovery_timeout=breaker_recovery_timeout,
+        )
 
     # ------------------------------------------------------------------ #
     # Packet handling
@@ -139,12 +149,19 @@ class TwinCore:
     # Bridge side (WebSocket client)
     # ------------------------------------------------------------------ #
     async def _bridge_loop(self) -> None:
-        """Connect to the bridge and ingest packets, reconnecting forever."""
+        """Connect to the bridge and ingest packets, reconnecting forever.
+
+        Each connect attempt is admitted through ``self.bridge_breaker``;
+        consecutive failures trip it OPEN so a dead bridge is retried on
+        the breaker's recovery timeout rather than the raw backoff alone.
+        """
         backoff = 1.0
         while True:
+            await self.bridge_breaker.acquire()
             try:
                 async with websockets.connect(self.bridge_url) as ws:
                     log.info("connected to bridge at %s", self.bridge_url)
+                    await self.bridge_breaker.record_success()
                     backoff = 1.0
                     async for raw in ws:
                         try:
@@ -157,7 +174,13 @@ class TwinCore:
                         except (json.JSONDecodeError, KeyError, TypeError) as exc:
                             log.warning("dropping malformed packet: %s", exc)
             except (OSError, websockets.WebSocketException) as exc:
-                log.warning("bridge connection failed (%s); retry in %.0fs", exc, backoff)
+                await self.bridge_breaker.record_failure()
+                log.warning(
+                    "bridge connection failed (%s); breaker=%s; retry in %.0fs",
+                    exc,
+                    self.bridge_breaker.state.value,
+                    backoff,
+                )
                 await asyncio.sleep(backoff)
                 backoff = min(backoff * 2.0, 30.0)
 
