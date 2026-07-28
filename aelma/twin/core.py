@@ -24,6 +24,16 @@ import websockets
 from .a2a_log import A2ALog
 from .bathymetry import BathymetryGrid
 from .circuit_breaker import CircuitBreaker
+from .health import HealthChecker
+from .metrics import (
+    ACTIONS_FIRED,
+    MEMORY_BYTES,
+    PACKET_HANDLING_SECONDS,
+    PACKETS_RECEIVED,
+    WEBSOCKET_CONNECTIONS,
+    MetricsCollector,
+    serve_metrics,
+)
 from .state import VesselState
 
 log = logging.getLogger("aelma.twin")
@@ -57,6 +67,8 @@ class TwinCore:
         a2a_keep: int = 5,
         breaker_failure_threshold: int = 5,
         breaker_recovery_timeout: float = 30.0,
+        health_port: int | None = 8091,
+        metrics_port: int | None = 9090,
     ) -> None:
         """Configure the twin; nothing connects until :meth:`run` is awaited."""
         self.bridge_url = bridge_url
@@ -67,10 +79,13 @@ class TwinCore:
         self.persist_interval = persist_interval
         self.viewport_radius_m = viewport_radius_m
         self.a2a_log_path = Path(a2a_log_path)
+        self.metrics_port = metrics_port
 
         self.state = VesselState()
         self.bathymetry = BathymetryGrid()
         self._viewers: set[Any] = set()
+        # Flipped by _bridge_loop; read by the health endpoint.
+        self.bridge_connected = False
         self.a2a_log = A2ALog(self.a2a_log_path, max_bytes=a2a_max_bytes, keep=a2a_keep)
         # Protects the bridge WebSocket client from hammering a dead bridge:
         # consecutive connect failures trip it OPEN for the recovery timeout.
@@ -78,6 +93,24 @@ class TwinCore:
             name="bridge",
             failure_threshold=breaker_failure_threshold,
             recovery_timeout=breaker_recovery_timeout,
+        )
+        self.health = (
+            HealthChecker(self, port=health_port) if health_port is not None else None
+        )
+        # Observability: counters/gauges/histograms scraped via /metrics.
+        self.metrics = MetricsCollector()
+        self.metrics.register_counter(
+            PACKETS_RECEIVED, "Telemetry packets ingested from the bridge."
+        )
+        self.metrics.register_counter(
+            ACTIONS_FIRED, "A2A actions logged."
+        )
+        self.metrics.register_gauge(
+            WEBSOCKET_CONNECTIONS, "Currently connected viewer WebSocket clients."
+        )
+        self.metrics.register_gauge(MEMORY_BYTES, "Process resident memory in bytes.")
+        self.metrics.register_histogram(
+            PACKET_HANDLING_SECONDS, "Time spent applying one telemetry packet."
         )
 
     # ------------------------------------------------------------------ #
@@ -98,6 +131,7 @@ class TwinCore:
         LLM-issued actions, or crew-entered actions. Returns the logged
         record as written (including generated fields like _seq and _loggedAt).
         """
+        self.metrics.increment(ACTIONS_FIRED, labels={"action": action})
         return await self.a2a_log.append(
             action,
             payload,
@@ -108,22 +142,29 @@ class TwinCore:
 
     def handle_packet(self, packet: dict[str, Any]) -> None:
         """Apply one TelemetryPacket to state and, if a sounding, the grid."""
-        self.state.apply_packet(packet)
-        if packet.get("channel") != DEPTH_CHANNEL:
-            return
-        value = packet.get("value")
-        if not isinstance(value, (int, float)) or value is None:
-            return
-        lat, lon = self.state.lat, self.state.lon
-        if lat is None or lon is None:
-            return  # no fix yet: nowhere to put the sounding
-        self.bathymetry.fuse(
-            lat,
-            lon,
-            float(value),
-            int(packet["timestamp_ns"]),
-            source=_SOURCE_MAP.get(str(packet.get("source")), "sounder"),
-        )
+        started = time.perf_counter()
+        try:
+            self.state.apply_packet(packet)
+            if packet.get("channel") != DEPTH_CHANNEL:
+                return
+            value = packet.get("value")
+            if not isinstance(value, (int, float)) or value is None:
+                return
+            lat, lon = self.state.lat, self.state.lon
+            if lat is None or lon is None:
+                return  # no fix yet: nowhere to put the sounding
+            self.bathymetry.fuse(
+                lat,
+                lon,
+                float(value),
+                int(packet["timestamp_ns"]),
+                source=_SOURCE_MAP.get(str(packet.get("source")), "sounder"),
+            )
+        finally:
+            self.metrics.increment(PACKETS_RECEIVED)
+            self.metrics.observe(
+                PACKET_HANDLING_SECONDS, time.perf_counter() - started
+            )
 
     # ------------------------------------------------------------------ #
     # Snapshot assembly
@@ -161,18 +202,22 @@ class TwinCore:
             try:
                 async with websockets.connect(self.bridge_url) as ws:
                     log.info("connected to bridge at %s", self.bridge_url)
+                    self.bridge_connected = True
                     await self.bridge_breaker.record_success()
                     backoff = 1.0
-                    async for raw in ws:
-                        try:
-                            packet = json.loads(raw)
-                            if isinstance(packet, list):
-                                for p in packet:
-                                    self.handle_packet(p)
-                            else:
-                                self.handle_packet(packet)
-                        except (json.JSONDecodeError, KeyError, TypeError) as exc:
-                            log.warning("dropping malformed packet: %s", exc)
+                    try:
+                        async for raw in ws:
+                            try:
+                                packet = json.loads(raw)
+                                if isinstance(packet, list):
+                                    for p in packet:
+                                        self.handle_packet(p)
+                                else:
+                                    self.handle_packet(packet)
+                            except (json.JSONDecodeError, KeyError, TypeError) as exc:
+                                log.warning("dropping malformed packet: %s", exc)
+                    finally:
+                        self.bridge_connected = False
             except (OSError, websockets.WebSocketException) as exc:
                 await self.bridge_breaker.record_failure()
                 log.warning(
@@ -190,12 +235,14 @@ class TwinCore:
     async def _viewer_handler(self, ws: Any) -> None:
         """Register a viewer, push an immediate snapshot, hold until close."""
         self._viewers.add(ws)
+        self.metrics.set_gauge(WEBSOCKET_CONNECTIONS, len(self._viewers))
         log.info("viewer connected (%d total)", len(self._viewers))
         try:
             await ws.send(json.dumps(self.build_snapshot()))
             await ws.wait_closed()
         finally:
             self._viewers.discard(ws)
+            self.metrics.set_gauge(WEBSOCKET_CONNECTIONS, len(self._viewers))
             log.info("viewer disconnected (%d total)", len(self._viewers))
 
     async def _broadcast_loop(self) -> None:
@@ -236,6 +283,13 @@ class TwinCore:
     async def run(self) -> None:
         """Load persisted state, then run all loops until cancelled."""
         self.bathymetry.load(self.bathymetry_path)
+        if self.health is not None:
+            await self.health.start()
+        metrics_server = (
+            await serve_metrics(self.metrics, port=self.metrics_port)
+            if self.metrics_port is not None
+            else None
+        )
         try:
             async with websockets.serve(self._viewer_handler, "0.0.0.0", self.viewer_port):
                 log.info("viewer WS server listening on port %d", self.viewer_port)
@@ -245,6 +299,11 @@ class TwinCore:
                     self._persist_loop(),
                 )
         finally:
+            if metrics_server is not None:
+                metrics_server.close()
+                await metrics_server.wait_closed()
+            if self.health is not None:
+                await self.health.stop()
             # Final save on shutdown to prevent data loss
             self.bathymetry.save(self.bathymetry_path)
             log.info("bathymetry saved on shutdown")

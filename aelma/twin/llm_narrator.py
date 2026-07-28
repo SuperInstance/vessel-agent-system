@@ -63,6 +63,24 @@ Rules:
 - No markdown, no bullet lists; write flowing prose.\
 """
 
+#: Template for explaining a single fired action (see
+#: :meth:`Narrator.build_action_prompt`). The context block is optional and
+#: only present when a vessel frame (or free-form context) is supplied.
+ACTION_EXPLANATION_TEMPLATE = """\
+A watcher rule just fired this viewer action:
+
+Action: {name}
+Payload: {payload}
+Reason: {reason}
+Priority: {priority:.2f}
+{context}
+Explain this action to the crew now.\
+"""
+
+#: Context line used inside :data:`ACTION_EXPLANATION_TEMPLATE` when a
+#: vessel frame accompanies the action.
+ACTION_CONTEXT_TEMPLATE = "Current vessel context: {context}"
+
 
 def _describe_action(action: Mapping[str, Any]) -> str:
     """One deterministic sentence for an action (fallback narration)."""
@@ -154,6 +172,31 @@ class Narrator:
         lines.append("Explain these actions to the crew now.")
         return "\n".join(lines)
 
+    def build_action_prompt(
+        self,
+        action: Mapping[str, Any],
+        context: Mapping[str, Any] | str | None = None,
+    ) -> str:
+        """Build the prompt for explaining a single ``action``. Pure.
+
+        ``context`` is an optional vessel frame (mapping, JSON-encoded) or
+        free-form string describing the situation around the action.
+        """
+        if context is None:
+            context_block = ""
+        elif isinstance(context, Mapping):
+            context_block = ACTION_CONTEXT_TEMPLATE.format(
+                context=json.dumps(dict(context), default=str))
+        else:
+            context_block = ACTION_CONTEXT_TEMPLATE.format(context=context)
+        return ACTION_EXPLANATION_TEMPLATE.format(
+            name=action.get("action", "?"),
+            payload=json.dumps(action.get("payload", {}), default=str),
+            reason=action.get("reason") or "(none given)",
+            priority=float(action.get("priority", 0.5)),
+            context=context_block,
+        )
+
     # ------------------------------------------------------------------ #
     # Backend calls
     # ------------------------------------------------------------------ #
@@ -192,6 +235,12 @@ class Narrator:
         resp.raise_for_status()
         return str(resp.json()["choices"][0]["message"]["content"]).strip()
 
+    async def _generate(self, prompt: str) -> str:
+        """Dispatch ``prompt`` to the configured backend."""
+        if self.backend == "ollama":
+            return await self._generate_ollama(prompt)
+        return await self._generate_openai(prompt)
+
     # ------------------------------------------------------------------ #
     # Public API
     # ------------------------------------------------------------------ #
@@ -212,9 +261,57 @@ class Narrator:
         if self.verbose:
             log.info("[narrator] %s %s: %d action(s)",
                      self.backend, self.model, len(actions))
-        if self.backend == "ollama":
-            return await self._generate_ollama(prompt)
-        return await self._generate_openai(prompt)
+        return await self._generate(prompt)
+
+    async def explain_action(
+        self,
+        action: Mapping[str, Any],
+        context: Mapping[str, Any] | str | None = None,
+    ) -> str:
+        """Explain a single fired ``action`` via the configured backend.
+
+        ``context`` is an optional vessel frame (mapping) or free-form
+        string. Raises :class:`httpx.HTTPError` on backend failure — use
+        :meth:`explain_action_safe` when a fallback sentence is acceptable.
+        """
+        prompt = self.build_action_prompt(action, context)
+        if self.verbose:
+            log.info("[narrator] %s %s: explain %s",
+                     self.backend, self.model, action.get("action", "?"))
+        return await self._generate(prompt)
+
+    async def explain_action_safe(
+        self,
+        action: Mapping[str, Any],
+        context: Mapping[str, Any] | str | None = None,
+    ) -> str:
+        """Like :meth:`explain_action` but never raises for backend failures.
+
+        Degrades to the deterministic :func:`_describe_action` sentence.
+        """
+        try:
+            return await self.explain_action(action, context)
+        except Exception as exc:
+            log.warning("[narrator] backend failed, using fallback: %s", exc)
+            return _describe_action(action)
+
+    async def narrate_frame(
+        self,
+        registry: Any,
+        frame: Mapping[str, Any],
+        *,
+        safe: bool = True,
+    ) -> str:
+        """WatcherRegistry integration: evaluate ``registry`` on ``frame``
+        and narrate the fired actions.
+
+        With ``safe=True`` (default) backend failures degrade to fallback
+        text; with ``safe=False`` they propagate as in :meth:`narrate`.
+        """
+        actions = registry.evaluate(frame)
+        if safe:
+            return await self.narrate_safe(actions, frame)
+        return await self.narrate(actions, frame)
 
     async def narrate_safe(
         self,
@@ -252,6 +349,8 @@ class Narrator:
 
 __all__ = [
     "Narrator",
+    "ACTION_CONTEXT_TEMPLATE",
+    "ACTION_EXPLANATION_TEMPLATE",
     "OLLAMA_BASE_URL",
     "OPENAI_BASE_URL",
     "SYSTEM_PROMPT",

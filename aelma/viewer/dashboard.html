@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AELMA Telemetry Dashboard — F/V EILEEN</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a1628;
+      color: #e0e6ed;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Header */
+    .dashboard-header {
+      background: linear-gradient(135deg, #1a2d4a 0%, #0f1c2e 100%);
+      border-bottom: 2px solid #3a7bd5;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: rgba(58, 123, 213, 0.2);
+      border-radius: 20px;
+      border: 1px solid #3a7bd5;
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.connected { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
+    .status-dot.disconnected { background: #ff4444; box-shadow: 0 0 8px #ff4444; }
+    .status-dot.connecting { background: #ffaa00; box-shadow: 0 0 8px #ffaa00; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .vessel-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: 1px;
+    }
+
+    .session-time {
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      color: #8cc8ff;
+    }
+
+    /* Control Panel */
+    .control-panel {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .control-btn {
+      padding: 0.5rem 1rem;
+      background: linear-gradient(135deg, #2a4a7a 0%, #1a2d4a 100%);
+      border: 1px solid #3a7bd5;
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .control-btn:hover {
+      background: linear-gradient(135deg, #3a5a8a 0%, #2a3d5a 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(58, 123, 213, 0.3);
+    }
+
+    .control-btn:active {
+      transform: translateY(0);
+    }
+
+    .control-btn.danger {
+      background: linear-gradient(135deg, #8a2a2a 0%, #5a1a1a 100%);
+      border-color: #ff4444;
+    }
+
+    .control-btn.danger:hover {
+      background: linear-gradient(135deg, #9a3a3a 0%, #6a2a2a 100%);
+      box-shadow: 0 4px 8px rgba(255, 68, 68, 0.3);
+    }
+
+    /* Main Grid */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 350px 1fr 400px;
+      grid-template-rows: auto auto 1fr;
+      gap: 1rem;
+      padding: 1rem;
+      height: calc(100vh - 80px);
+    }
+
+    /* Panels */
+    .panel {
+      background: linear-gradient(135deg, rgba(26, 45, 74, 0.9) 0%, rgba(15, 28, 46, 0.9) 100%);
+      border: 1px solid #3a7bd5;
+      border-radius: 8px;
+      padding: 1rem;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .panel-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #8cc8ff;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(58, 123, 213, 0.3);
+    }
+
+    /* Gauge Panel */
+    .gauge-panel {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .gauge-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .gauge-item {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(58, 123, 213, 0.3);
+      border-radius: 6px;
+      padding: 0.75rem;
+      text-align: center;
+    }
+
+    .gauge-label {
+      font-size: 0.7rem;
+      color: #8cc8ff;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.25rem;
+    }
+
+    .gauge-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #ffffff;
+      font-family: 'Courier New', monospace;
+    }
+
+    .gauge-unit {
+      font-size: 0.75rem;
+      color: #5a8cc8;
+      margin-left: 0.25rem;
+    }
+
+    .gauge-quality {
+      font-size: 0.65rem;
+      color: #ffaa00;
+      margin-top: 0.25rem;
+    }
+
+    .quality-good { color: #00ff88; }
+    .quality-fair { color: #ffaa00; }
+    .quality-poor { color: #ff6600; }
+    .quality-bad { color: #ff4444; }
+
+    /* Charts Panel */
+    .charts-panel {
+      grid-column: 2;
+      grid-row: 1 / 3;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .chart-container {
+      flex: 1;
+      position: relative;
+      min-height: 200px;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .chart-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #8cc8ff;
+    }
+
+    .time-window-selector {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .time-btn {
+      padding: 0.25rem 0.5rem;
+      background: rgba(58, 123, 213, 0.2);
+      border: 1px solid #3a7bd5;
+      border-radius: 4px;
+      color: #8cc8ff;
+      font-size: 0.7rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .time-btn:hover, .time-btn.active {
+      background: rgba(58, 123, 213, 0.5);
+      color: #ffffff;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Alert Panel */
+    .alert-panel {
+      grid-column: 1;
+      grid-row: 2;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .alert-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .alert-item {
+      padding: 0.75rem;
+      border-radius: 6px;
+      border-left: 4px solid;
+      background: rgba(0, 0, 0, 0.3);
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .alert-item.priority-high {
+      border-color: #ff4444;
+      background: rgba(255, 68, 68, 0.1);
+    }
+
+    .alert-item.priority-medium {
+      border-color: #ffaa00;
+      background: rgba(255, 170, 0, 0.1);
+    }
+
+    .alert-item.priority-low {
+      border-color: #00ff88;
+      background: rgba(0, 255, 136, 0.1);
+    }
+
+    .alert-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.25rem;
+    }
+
+    .alert-type {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #ffffff;
+      text-transform: uppercase;
+    }
+
+    .alert-time {
+      font-size: 0.65rem;
+      color: #8cc8ff;
+      font-family: 'Courier New', monospace;
+    }
+
+    .alert-message {
+      font-size: 0.75rem;
+      color: #c0d0e0;
+    }
+
+    .no-alerts {
+      text-align: center;
+      color: #5a8cc8;
+      font-size: 0.8rem;
+      padding: 1rem;
+    }
+
+    /* Bathymetry Panel */
+    .bathymetry-panel {
+      grid-column: 3;
+      grid-row: 1 / 3;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .heatmap-container {
+      flex: 1;
+      position: relative;
+      min-height: 400px;
+    }
+
+    .heatmap-legend {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 0.5rem;
+      font-size: 0.7rem;
+      color: #8cc8ff;
+    }
+
+    .heatmap-stats {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+      margin-top: 0.5rem;
+    }
+
+    .heatmap-stat {
+      text-align: center;
+    }
+
+    .heatmap-stat-label {
+      font-size: 0.65rem;
+      color: #5a8cc8;
+    }
+
+    .heatmap-stat-value {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #ffffff;
+      font-family: 'Courier New', monospace;
+    }
+
+    /* Watcher Rules Panel */
+    .watcher-panel {
+      grid-column: 1;
+      grid-row: 3;
+      overflow-y: auto;
+    }
+
+    .watcher-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .watcher-item {
+      padding: 0.75rem;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(58, 123, 213, 0.3);
+      border-radius: 6px;
+    }
+
+    .watcher-item.active {
+      border-color: #ffaa00;
+      background: rgba(255, 170, 0, 0.1);
+    }
+
+    .watcher-name {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 0.25rem;
+    }
+
+    .watcher-details {
+      font-size: 0.7rem;
+      color: #8cc8ff;
+    }
+
+    .watcher-stats {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.5rem;
+      font-size: 0.65rem;
+      color: #5a8cc8;
+    }
+
+    /* Position Panel */
+    .position-panel {
+      grid-column: 2;
+      grid-row: 3;
+    }
+
+    .position-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .position-item {
+      text-align: center;
+    }
+
+    .position-label {
+      font-size: 0.7rem;
+      color: #8cc8ff;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.25rem;
+    }
+
+    .position-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #ffffff;
+      font-family: 'Courier New', monospace;
+    }
+
+    /* Data Log Panel */
+    .datalog-panel {
+      grid-column: 3;
+      grid-row: 3;
+      overflow-y: auto;
+      max-height: 200px;
+    }
+
+    .datalog-content {
+      font-family: 'Courier New', monospace;
+      font-size: 0.65rem;
+      line-height: 1.4;
+    }
+
+    .log-entry {
+      padding: 0.25rem 0;
+      border-bottom: 1px solid rgba(58, 123, 213, 0.1);
+    }
+
+    .log-timestamp {
+      color: #5a8cc8;
+    }
+
+    .log-message {
+      color: #c0d0e0;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1400px) {
+      .dashboard-grid {
+        grid-template-columns: 300px 1fr 350px;
+      }
+    }
+
+    @media (max-width: 1200px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto;
+      }
+
+      .gauge-panel { grid-column: 1; grid-row: 1; }
+      .charts-panel { grid-column: 1; grid-row: 2; }
+      .alert-panel { grid-column: 2; grid-row: 1; }
+      .bathymetry-panel { grid-column: 2; grid-row: 2; }
+      .watcher-panel { grid-column: 1; grid-row: 3; }
+      .position-panel { grid-column: 2; grid-row: 3; }
+      .datalog-panel { grid-column: 1 / 3; grid-row: 4; }
+    }
+
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #3a7bd5;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #4a8cd5;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-header">
+    <div class="header-left">
+      <div class="status-indicator">
+        <div id="status-dot" class="status-dot disconnected"></div>
+        <span id="conn-status">connecting...</span>
+      </div>
+      <div class="vessel-title">F/V EILEEN — Telemetry Dashboard</div>
+    </div>
+    <div class="session-time" id="session-time">00:00:00</div>
+    <div class="control-panel">
+      <button class="control-btn" id="btn-export">Export Data</button>
+      <button class="control-btn danger" id="btn-alert">Test Alert</button>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+    <!-- Gauge Panel -->
+    <div class="panel gauge-panel">
+      <div class="panel-title">Real-Time Gauges</div>
+      <div class="gauge-grid">
+        <div class="gauge-item">
+          <div class="gauge-label">Depth</div>
+          <div class="gauge-value" id="gauge-depth">--<span class="gauge-unit">m</span></div>
+          <div class="gauge-quality" id="depth-quality">No data</div>
+        </div>
+        <div class="gauge-item">
+          <div class="gauge-label">Speed</div>
+          <div class="gauge-value" id="gauge-speed">--<span class="gauge-unit">kn</span></div>
+          <div class="gauge-quality" id="speed-quality">No data</div>
+        </div>
+        <div class="gauge-item">
+          <div class="gauge-label">Heading</div>
+          <div class="gauge-value" id="gauge-heading">--<span class="gauge-unit">°</span></div>
+          <div class="gauge-quality" id="heading-quality">No data</div>
+        </div>
+        <div class="gauge-item">
+          <div class="gauge-label">Sea Temp</div>
+          <div class="gauge-value" id="gauge-temp">--<span class="gauge-unit">°C</span></div>
+          <div class="gauge-quality" id="temp-quality">No data</div>
+        </div>
+        <div class="gauge-item">
+          <div class="gauge-label">Wind Speed</div>
+          <div class="gauge-value" id="gauge-wind">--<span class="gauge-unit">kts</span></div>
+          <div class="gauge-quality" id="wind-quality">No data</div>
+        </div>
+        <div class="gauge-item">
+          <div class="gauge-label">Engine RPM</div>
+          <div class="gauge-value" id="gauge-rpm">--<span class="gauge-unit">RPM</span></div>
+          <div class="gauge-quality" id="rpm-quality">No data</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Panel -->
+    <div class="panel charts-panel">
+      <div class="chart-container">
+        <div class="chart-header">
+          <div class="chart-title">Depth Over Time</div>
+          <div class="time-window-selector">
+            <button class="time-btn" data-window="5">5m</button>
+            <button class="time-btn active" data-window="15">15m</button>
+            <button class="time-btn" data-window="60">60m</button>
+          </div>
+        </div>
+        <canvas id="depth-chart"></canvas>
+      </div>
+      <div class="chart-container">
+        <div class="chart-header">
+          <div class="chart-title">Speed Profile</div>
+          <div class="time-window-selector">
+            <button class="time-btn" data-window="5">5m</button>
+            <button class="time-btn active" data-window="15">15m</button>
+            <button class="time-btn" data-window="60">60m</button>
+          </div>
+        </div>
+        <canvas id="speed-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Alert Panel -->
+    <div class="panel alert-panel">
+      <div class="panel-title">Alert History</div>
+      <div class="alert-list" id="alert-list">
+        <div class="no-alerts">No alerts</div>
+      </div>
+    </div>
+
+    <!-- Bathymetry Panel -->
+    <div class="panel bathymetry-panel">
+      <div class="panel-title">Bathymetry Heatmap</div>
+      <div class="heatmap-container">
+        <canvas id="bathymetry-heatmap"></canvas>
+      </div>
+      <div class="heatmap-legend">
+        <span>Shallow (&lt;30m)</span>
+        <span>Medium (30-80m)</span>
+        <span>Deep (&gt;80m)</span>
+      </div>
+      <div class="heatmap-stats">
+        <div class="heatmap-stat">
+          <div class="heatmap-stat-label">Voxels</div>
+          <div class="heatmap-stat-value" id="voxel-count">0</div>
+        </div>
+        <div class="heatmap-stat">
+          <div class="heatmap-stat-label">Min Depth</div>
+          <div class="heatmap-stat-value" id="min-depth">--</div>
+        </div>
+        <div class="heatmap-stat">
+          <div class="heatmap-stat-label">Max Depth</div>
+          <div class="heatmap-stat-value" id="max-depth">--</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Watcher Rules Panel -->
+    <div class="panel watcher-panel">
+      <div class="panel-title">Active Watcher Rules</div>
+      <div class="watcher-list" id="watcher-list">
+        <div class="watcher-item">
+          <div class="watcher-name">Shallow Water Warning</div>
+          <div class="watcher-details">Depth &lt; 2.0m</div>
+          <div class="watcher-stats">
+            <span>Fires: 0</span>
+            <span>Cooldown: 30s</span>
+          </div>
+        </div>
+        <div class="watcher-item">
+          <div class="watcher-name">High Speed Alert</div>
+          <div class="watcher-details">Speed &gt; 10.0kn</div>
+          <div class="watcher-stats">
+            <span>Fires: 0</span>
+            <span>Cooldown: 60s</span>
+          </div>
+        </div>
+        <div class="watcher-item">
+          <div class="watcher-name">Engine Temperature</div>
+          <div class="watcher-details">Temp &gt; 90°C</div>
+          <div class="watcher-stats">
+            <span>Fires: 0</span>
+            <span>Cooldown: 45s</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Position Panel -->
+    <div class="panel position-panel">
+      <div class="panel-title">Position & Navigation</div>
+      <div class="position-grid">
+        <div class="position-item">
+          <div class="position-label">Latitude</div>
+          <div class="position-value" id="position-lat">--</div>
+        </div>
+        <div class="position-item">
+          <div class="position-label">Longitude</div>
+          <div class="position-value" id="position-lon">--</div>
+        </div>
+        <div class="position-item">
+          <div class="position-label">Course</div>
+          <div class="position-value" id="position-course">--</div>
+        </div>
+        <div class="position-item">
+          <div class="position-label">Vessel ID</div>
+          <div class="position-value" id="vessel-id">--</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Log Panel -->
+    <div class="panel datalog-panel">
+      <div class="panel-title">Data Log</div>
+      <div class="datalog-content" id="datalog-content">
+        <div class="log-entry">
+          <span class="log-timestamp">[00:00:00]</span>
+          <span class="log-message">Dashboard initialized</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================
+    // Configuration
+    // ============================================
+    const WS_URL = 'ws://localhost:8090';
+    const MAX_DATA_POINTS = 3600; // 1 hour of data at 1 second intervals
+    const ALERT_MAX_AGE = 5 * 60 * 1000; // 5 minutes
+    const UPDATE_INTERVAL = 1000; // 1 second
+
+    // ============================================
+    // State Management
+    // ============================================
+    const state = {
+      connected: false,
+      startTime: Date.now(),
+      lastUpdate: null,
+      telemetry: {
+        depth: [],
+        speed: [],
+        heading: [],
+        temp: [],
+        wind: [],
+        rpm: []
+      },
+      alerts: [],
+      bathymetry: {
+        voxels: 0,
+        minDepth: null,
+        maxDepth: null,
+        cells: []
+      },
+      timeWindow: 15 * 60 * 1000, // 15 minutes default
+      watchStats: {
+        shallow: { fires: 0 },
+        highSpeed: { fires: 0 },
+        engineTemp: { fires: 0 }
+      }
+    };
+
+    // ============================================
+    // DOM Elements
+    // ============================================
+    const elements = {
+      statusDot: document.getElementById('status-dot'),
+      connStatus: document.getElementById('conn-status'),
+      sessionTime: document.getElementById('session-time'),
+      depthGauge: document.getElementById('gauge-depth'),
+      speedGauge: document.getElementById('gauge-speed'),
+      headingGauge: document.getElementById('gauge-heading'),
+      tempGauge: document.getElementById('gauge-temp'),
+      windGauge: document.getElementById('gauge-wind'),
+      rpmGauge: document.getElementById('gauge-rpm'),
+      depthQuality: document.getElementById('depth-quality'),
+      speedQuality: document.getElementById('speed-quality'),
+      headingQuality: document.getElementById('heading-quality'),
+      tempQuality: document.getElementById('temp-quality'),
+      windQuality: document.getElementById('wind-quality'),
+      rpmQuality: document.getElementById('rpm-quality'),
+      alertList: document.getElementById('alert-list'),
+      voxelCount: document.getElementById('voxel-count'),
+      minDepth: document.getElementById('min-depth'),
+      maxDepth: document.getElementById('max-depth'),
+      positionLat: document.getElementById('position-lat'),
+      positionLon: document.getElementById('position-lon'),
+      positionCourse: document.getElementById('position-course'),
+      vesselId: document.getElementById('vessel-id'),
+      datalogContent: document.getElementById('datalog-content'),
+      depthChart: document.getElementById('depth-chart'),
+      speedChart: document.getElementById('speed-chart'),
+      bathymetryHeatmap: document.getElementById('bathymetry-heatmap'),
+      btnExport: document.getElementById('btn-export'),
+      btnAlert: document.getElementById('btn-alert')
+    };
+
+    // ============================================
+    // Chart Classes
+    // ============================================
+    class LineChart {
+      constructor(canvas, config = {}) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.data = [];
+        this.config = {
+          color: config.color || '#00ff88',
+          fillColor: config.fillColor || 'rgba(0, 255, 136, 0.1)',
+          lineColor: config.lineColor || '#3a7bd5',
+          threshold: config.threshold || null,
+          thresholdColor: config.thresholdColor || '#ff4444',
+          min: config.min || null,
+          max: config.max || null,
+          ...config
+        };
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+      }
+
+      resize() {
+        const rect = this.canvas.parentElement.getBoundingClientRect();
+        this.canvas.width = rect.width - 32;
+        this.canvas.height = rect.height - 40;
+      }
+
+      addData(timestamp, value) {
+        this.data.push({ timestamp, value });
+        // Remove old data points
+        const cutoff = timestamp - state.timeWindow;
+        this.data = this.data.filter(d => d.timestamp > cutoff);
+      }
+
+      render() {
+        const { width, height } = this.canvas;
+        const ctx = this.ctx;
+
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
+
+        if (this.data.length < 2) return;
+
+        // Calculate scales
+        const values = this.data.map(d => d.value);
+        let minVal = this.config.min !== null ? this.config.min : Math.min(...values);
+        let maxVal = this.config.max !== null ? this.config.max : Math.max(...values);
+        const range = maxVal - minVal || 1;
+
+        const timestamps = this.data.map(d => d.timestamp);
+        const minTime = Math.min(...timestamps);
+        const maxTime = Math.max(...timestamps);
+        const timeRange = maxTime - minTime || 1;
+
+        // Drawing functions
+        const getX = (t) => ((t - minTime) / timeRange) * width;
+        const getY = (v) => height - ((v - minVal) / range) * (height - 20) - 10;
+
+        // Draw grid
+        ctx.strokeStyle = 'rgba(58, 123, 213, 0.2)';
+        ctx.lineWidth = 1;
+
+        // Horizontal grid lines
+        for (let i = 0; i <= 4; i++) {
+          const y = (height / 4) * i;
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(width, y);
+          ctx.stroke();
+        }
+
+        // Vertical grid lines
+        for (let i = 0; i <= 4; i++) {
+          const x = (width / 4) * i;
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, height);
+          ctx.stroke();
+        }
+
+        // Draw threshold line if configured
+        if (this.config.threshold !== null) {
+          const y = getY(this.config.threshold);
+          ctx.strokeStyle = this.config.thresholdColor;
+          ctx.lineWidth = 2;
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(width, y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // Draw area fill
+        ctx.fillStyle = this.config.fillColor;
+        ctx.beginPath();
+        ctx.moveTo(getX(this.data[0].timestamp), height);
+        for (const point of this.data) {
+          ctx.lineTo(getX(point.timestamp), getY(point.value));
+        }
+        ctx.lineTo(getX(this.data[this.data.length - 1].timestamp), height);
+        ctx.closePath();
+        ctx.fill();
+
+        // Draw line
+        ctx.strokeStyle = this.config.lineColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(getX(this.data[0].timestamp), getY(this.data[0].value));
+        for (const point of this.data) {
+          ctx.lineTo(getX(point.timestamp), getY(point.value));
+        }
+        ctx.stroke();
+
+        // Draw current value indicator
+        if (this.data.length > 0) {
+          const last = this.data[this.data.length - 1];
+          const x = getX(last.timestamp);
+          const y = getY(last.value);
+
+          // Draw dot
+          ctx.fillStyle = this.config.color;
+          ctx.beginPath();
+          ctx.arc(x, y, 4, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Draw glow
+          ctx.shadowColor = this.config.color;
+          ctx.shadowBlur = 10;
+          ctx.beginPath();
+          ctx.arc(x, y, 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+      }
+
+      getMinMax() {
+        if (this.data.length === 0) return { min: null, max: null };
+        const values = this.data.map(d => d.value);
+        return {
+          min: Math.min(...values),
+          max: Math.max(...values)
+        };
+      }
+    }
+
+    // ============================================
+    // Bathymetry Heatmap
+    // ============================================
+    class BathymetryHeatmap {
+      constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.cells = [];
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+      }
+
+      resize() {
+        const rect = this.canvas.parentElement.getBoundingClientRect();
+        this.canvas.width = rect.width - 32;
+        this.canvas.height = rect.height - 40;
+      }
+
+      updateCells(cells) {
+        this.cells = cells;
+        this.render();
+      }
+
+      render() {
+        const { width, height } = this.canvas;
+        const ctx = this.ctx;
+
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
+
+        if (this.cells.length === 0) {
+          ctx.fillStyle = 'rgba(90, 140, 200, 0.5)';
+          ctx.font = '14px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('No bathymetry data', width / 2, height / 2);
+          return;
+        }
+
+        // Calculate bounds
+        const lats = this.cells.map(c => c[0]);
+        const lons = this.cells.map(c => c[1]);
+        const depths = this.cells.map(c => c[2]);
+
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
+        const minLon = Math.min(...lons);
+        const maxLon = Math.max(...lons);
+        const minDepth = Math.min(...depths);
+        const maxDepth = Math.max(...depths);
+
+        const latRange = maxLat - minLat || 1;
+        const lonRange = maxLon - minLon || 1;
+        const depthRange = maxDepth - minDepth || 1;
+
+        // Color scale
+        const getColor = (depth) => {
+          const normalized = (depth - minDepth) / depthRange;
+          if (normalized < 0.3) {
+            // Shallow: orange to yellow
+            const t = normalized / 0.3;
+            return `rgb(${255}, ${Math.floor(154 + 101 * t)}, ${Math.floor(60 + 196 * t)})`;
+          } else if (normalized < 0.7) {
+            // Mid: green
+            const t = (normalized - 0.3) / 0.4;
+            return `rgb(${Math.floor(63 + 47 * t)}, ${Math.floor(214 - 146 * t)}, ${Math.floor(140 - 68 * t)})`;
+          } else {
+            // Deep: blue
+            const t = (normalized - 0.7) / 0.3;
+            return `rgb(${Math.floor(47 - 17 * t)}, ${Math.floor(111 - 59 * t)}, ${Math.floor(208 + 23 * t)})`;
+          }
+        };
+
+        // Draw cells
+        const cellSize = Math.max(4, Math.min(width, height) / Math.sqrt(this.cells.length));
+
+        for (const cell of this.cells) {
+          const [lat, lon, depth, confidence] = cell;
+
+          const x = ((lon - minLon) / lonRange) * (width - cellSize);
+          const y = ((lat - minLat) / latRange) * (height - cellSize);
+
+          const color = getColor(depth);
+          const alpha = Math.max(0.3, confidence);
+
+          ctx.fillStyle = color.replace('rgb', 'rgba').replace(')', `, ${alpha})`);
+          ctx.fillRect(x, y, cellSize, cellSize);
+        }
+
+        // Draw vessel position indicator at center
+        const centerX = width / 2;
+        const centerY = height / 2;
+
+        ctx.strokeStyle = '#ff7700';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 8, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ff7700';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      getStats() {
+        if (this.cells.length === 0) {
+          return { count: 0, min: null, max: null };
+        }
+        const depths = this.cells.map(c => c[2]);
+        return {
+          count: this.cells.length,
+          min: Math.min(...depths),
+          max: Math.max(...depths)
+        };
+      }
+    }
+
+    // ============================================
+    // Initialize Charts
+    // ============================================
+    const depthChart = new LineChart(elements.depthChart, {
+      color: '#ff9a3c',
+      fillColor: 'rgba(255, 154, 60, 0.1)',
+      lineColor: '#ff9a3c',
+      threshold: 2.0,
+      thresholdColor: '#ff4444'
+    });
+
+    const speedChart = new LineChart(elements.speedChart, {
+      color: '#3fd68c',
+      fillColor: 'rgba(63, 214, 140, 0.1)',
+      lineColor: '#3fd68c',
+      threshold: 10.0,
+      thresholdColor: '#ffaa00'
+    });
+
+    const bathymetryHeatmap = new BathymetryHeatmap(elements.bathymetryHeatmap);
+
+    // ============================================
+    // WebSocket Connection
+    // ============================================
+    let ws = null;
+    let retryDelay = 250;
+
+    function setConnectionState(status, message) {
+      elements.statusDot.className = `status-dot ${status}`;
+      elements.connStatus.textContent = message;
+      state.connected = status === 'connected';
+    }
+
+    function connect() {
+      setConnectionState('connecting', `Connecting to ${WS_URL}...`);
+      ws = new WebSocket(WS_URL);
+
+      ws.onopen = () => {
+        retryDelay = 250;
+        setConnectionState('connected', 'Live — TwinCore connected');
+        addLogEntry('Connected to TwinCore');
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleSnapshot(data);
+        } catch (err) {
+          console.error('Failed to parse message:', err);
+          addLogEntry(`Error parsing message: ${err.message}`, 'error');
+        }
+      };
+
+      ws.onclose = () => {
+        setConnectionState('disconnected', `Disconnected — retrying in ${(retryDelay / 1000).toFixed(1)}s`);
+        addLogEntry('Connection lost, retrying...');
+        setTimeout(connect, retryDelay);
+        retryDelay = Math.min(retryDelay * 2, 5000);
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
+    }
+
+    // ============================================
+    // Data Processing
+    // ============================================
+    function handleSnapshot(data) {
+      state.lastUpdate = Date.now();
+
+      // Update vessel info
+      if (data.vessel_id) {
+        elements.vesselId.textContent = data.vessel_id;
+      }
+
+      // Update position
+      if (data.pose) {
+        const { lat, lon, heading_deg, speed_kn } = data.pose;
+        elements.positionLat.textContent = lat?.toFixed(5) || '--';
+        elements.positionLon.textContent = lon?.toFixed(5) || '--';
+        elements.positionCourse.textContent = heading_deg?.toFixed(0) + '°' || '--';
+
+        // Update charts
+        const timestamp = Date.now();
+        if (speed_kn !== null && speed_kn !== undefined) {
+          speedChart.addData(timestamp, speed_kn);
+        }
+      }
+
+      // Update channels
+      if (data.channels) {
+        updateChannelGauges(data.channels);
+      }
+
+      // Update bathymetry
+      if (data.bathymetry) {
+        const { voxel_count, cells } = data.bathymetry;
+        elements.voxelCount.textContent = voxel_count?.toLocaleString() || '0';
+
+        bathymetryHeatmap.updateCells(cells || []);
+
+        const stats = bathymetryHeatmap.getStats();
+        elements.minDepth.textContent = stats.min !== null ? stats.min.toFixed(1) : '--';
+        elements.maxDepth.textContent = stats.max !== null ? stats.max.toFixed(1) : '--';
+
+        // Check for shallow water
+        if (stats.min !== null && stats.min < 2.0) {
+          triggerAlert('shallow_water', 'Shallow Water Warning', `Depth: ${stats.min.toFixed(1)}m`, 'high');
+        }
+      }
+
+      // Update charts
+      requestAnimationFrame(() => {
+        depthChart.render();
+        speedChart.render();
+      });
+    }
+
+    function updateChannelGauges(channels) {
+      const timestamp = Date.now();
+
+      // Depth
+      if (channels.depth_m) {
+        const { value, quality } = channels.depth_m;
+        if (typeof value === 'number') {
+          elements.depthGauge.innerHTML = `${value.toFixed(1)}<span class="gauge-unit">m</span>`;
+          depthChart.addData(timestamp, value);
+        }
+        elements.depthQuality.textContent = quality || 'good';
+        elements.depthQuality.className = `gauge-quality quality-${quality || 'good'}`;
+      }
+
+      // Speed
+      if (channels.speed_kn) {
+        const { value, quality } = channels.speed_kn;
+        if (typeof value === 'number') {
+          elements.speedGauge.innerHTML = `${value.toFixed(1)}<span class="gauge-unit">kn</span>`;
+        }
+        elements.speedQuality.textContent = quality || 'good';
+        elements.speedQuality.className = `gauge-quality quality-${quality || 'good'}`;
+      }
+
+      // Heading (from pose, not channels)
+      if (channels.heading_deg) {
+        const { value, quality } = channels.heading_deg;
+        if (typeof value === 'number') {
+          elements.headingGauge.innerHTML = `${value.toFixed(0)}<span class="gauge-unit">°</span>`;
+        }
+        elements.headingQuality.textContent = quality || 'good';
+        elements.headingQuality.className = `gauge-quality quality-${quality || 'good'}`;
+      }
+
+      // Sea Temperature
+      if (channels.sea_temp_c) {
+        const { value, quality } = channels.sea_temp_c;
+        if (typeof value === 'number') {
+          elements.tempGauge.innerHTML = `${value.toFixed(1)}<span class="gauge-unit">°C</span>`;
+
+          // Check for high temperature
+          if (value > 25) {
+            triggerAlert('high_temp', 'High Sea Temperature', `Temp: ${value.toFixed(1)}°C`, 'medium');
+          }
+        }
+        elements.tempQuality.textContent = quality || 'good';
+        elements.tempQuality.className = `gauge-quality quality-${quality || 'good'}`;
+      }
+
+      // Wind
+      if (channels.wind_kts) {
+        const { value, quality } = channels.wind_kts;
+        if (typeof value === 'number') {
+          elements.windGauge.innerHTML = `${value.toFixed(1)}<span class="gauge-unit">kts</span>`;
+
+          // Check for high wind
+          if (value > 20) {
+            triggerAlert('high_wind', 'High Wind Warning', `Wind: ${value.toFixed(1)}kts`, 'medium');
+          }
+        }
+        elements.windQuality.textContent = quality || 'good';
+        elements.windQuality.className = `gauge-quality quality-${quality || 'good'}`;
+      }
+
+      // Engine RPM
+      if (channels.engine_rpm) {
+        const { value, quality } = channels.engine_rpm;
+        if (typeof value === 'number') {
+          elements.rpmGauge.innerHTML = `${value.toFixed(0)}<span class="gauge-unit">RPM</span>`;
+        }
+        elements.rpmQuality.textContent = quality || 'good';
+        elements.rpmQuality.className = `gauge-quality quality-${quality || 'good'}`;
+      }
+    }
+
+    // ============================================
+    // Alert System
+    // ============================================
+    function triggerAlert(type, message, details, priority = 'medium') {
+      const alert = {
+        id: Date.now(),
+        type,
+        message,
+        details,
+        priority,
+        timestamp: Date.now()
+      };
+
+      state.alerts.unshift(alert);
+
+      // Keep only recent alerts
+      state.alerts = state.alerts.filter(a => Date.now() - a.timestamp < ALERT_MAX_AGE);
+
+      // Update watcher stats
+      if (type === 'shallow_water') {
+        state.watchStats.shallow.fires++;
+      } else if (type === 'high_speed') {
+        state.watchStats.highSpeed.fires++;
+      } else if (type === 'high_temp') {
+        state.watchStats.engineTemp.fires++;
+      }
+
+      renderAlerts();
+      updateWatcherStats();
+      addLogEntry(`ALERT: ${message} - ${details}`, 'alert');
+    }
+
+    function renderAlerts() {
+      if (state.alerts.length === 0) {
+        elements.alertList.innerHTML = '<div class="no-alerts">No alerts</div>';
+        return;
+      }
+
+      elements.alertList.innerHTML = state.alerts.map(alert => `
+        <div class="alert-item priority-${alert.priority}">
+          <div class="alert-header">
+            <div class="alert-type">${alert.type}</div>
+            <div class="alert-time">${formatTime(alert.timestamp)}</div>
+          </div>
+          <div class="alert-message">${alert.message} - ${alert.details}</div>
+        </div>
+      `).join('');
+    }
+
+    function updateWatcherStats() {
+      const watcherList = document.getElementById('watcher-list');
+      const items = watcherList.querySelectorAll('.watcher-item');
+
+      items.forEach((item, index) => {
+        const stats = item.querySelector('.watcher-stats');
+        const keys = ['shallow', 'highSpeed', 'engineTemp'];
+        const key = keys[index];
+        if (key && state.watchStats[key]) {
+          stats.innerHTML = `
+            <span>Fires: ${state.watchStats[key].fires}</span>
+            <span>Active</span>
+          `;
+          item.classList.add('active');
+        }
+      });
+    }
+
+    // ============================================
+    // Logging
+    // ============================================
+    function addLogEntry(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.innerHTML = `
+        <span class="log-timestamp">[${formatTime(Date.now())}]</span>
+        <span class="log-message" style="color: ${type === 'error' ? '#ff4444' : type === 'alert' ? '#ffaa00' : '#c0d0e0'}">${message}</span>
+      `;
+
+      elements.datalogContent.insertBefore(entry, elements.datalogContent.firstChild);
+
+      // Keep only last 50 entries
+      while (elements.datalogContent.children.length > 50) {
+        elements.datalogContent.removeChild(elements.datalogContent.lastChild);
+      }
+    }
+
+    // ============================================
+    // Utilities
+    // ============================================
+    function formatTime(timestamp) {
+      const date = new Date(timestamp);
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${hours}:${minutes}:${seconds}`;
+    }
+
+    function formatDuration(ms) {
+      const seconds = Math.floor(ms / 1000);
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    // ============================================
+    // Session Timer
+    // ============================================
+    setInterval(() => {
+      const elapsed = Date.now() - state.startTime;
+      elements.sessionTime.textContent = formatDuration(elapsed);
+    }, 1000);
+
+    // ============================================
+    // Time Window Selector
+    // ============================================
+    document.querySelectorAll('.time-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const window = parseInt(btn.dataset.window);
+        state.timeWindow = window * 60 * 1000;
+
+        // Update active state
+        document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        addLogEntry(`Time window set to ${window} minutes`);
+      });
+    });
+
+    // ============================================
+    // Control Buttons
+    // ============================================
+    elements.btnExport.addEventListener('click', () => {
+      const exportData = {
+        timestamp: new Date().toISOString(),
+        sessionDuration: formatDuration(Date.now() - state.startTime),
+        telemetry: state.telemetry,
+        alerts: state.alerts,
+        bathymetry: state.bathymetry
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `aelma-telemetry-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      addLogEntry('Telemetry data exported');
+    });
+
+    elements.btnAlert.addEventListener('click', () => {
+      triggerAlert('test', 'Test Alert', 'This is a manual test alert', 'low');
+    });
+
+    // ============================================
+    // Animation Loop
+    // ============================================
+    function animate() {
+      depthChart.render();
+      speedChart.render();
+      bathymetryHeatmap.render();
+      requestAnimationFrame(animate);
+    }
+
+    // ============================================
+    // Initialize
+    // ============================================
+    function init() {
+      addLogEntry('Dashboard initialized');
+      addLogEntry('Connecting to TwinCore...');
+      connect();
+      animate();
+    }
+
+    // Start the dashboard
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+[Unit]
+Description=AELMA NMEA Simulator
+Documentation=https://github.com/SuperInstance/aelma
+After=network.target
+
+[Service]
+Type=simple
+User=aelma
+Group=aelma
+WorkingDirectory=/opt/aelma
+Environment="PATH=/opt/aelma/.venv/bin:/usr/bin"
+ExecStart=/opt/aelma/.venv/bin/python -m build_claude.simulator.simulate --duration-min 0.1 --speedup 30
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/var/log/aelma/simulator.log
+StandardError=append:/var/log/aelma/simulator.log
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/aelma /var/lib/aelma
+
+[Install]
+WantedBy=multi-user.target

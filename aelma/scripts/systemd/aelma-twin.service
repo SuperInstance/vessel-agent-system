@@ -1,0 +1,27 @@
+[Unit]
+Description=AELMA Digital Twin
+Documentation=https://github.com/SuperInstance/aelma
+After=network.target aelma-bridge.service
+Requires=aelma-bridge.service
+
+[Service]
+Type=simple
+User=aelma
+Group=aelma
+WorkingDirectory=/opt/aelma
+Environment="PATH=/opt/aelma/.venv/bin:/usr/bin"
+ExecStart=/opt/aelma/.venv/bin/python -m twin --bridge-url ws://localhost:8000 --viewer-port 8090
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/var/log/aelma/twin.log
+StandardError=append:/var/log/aelma/twin.log
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/aelma /var/lib/aelma
+
+[Install]
+WantedBy=multi-user.target

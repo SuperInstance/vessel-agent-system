@@ -1,0 +1,26 @@
+[Unit]
+Description=AELMA NMEA Bridge
+Documentation=https://github.com/SuperInstance/aelma
+After=network.target
+
+[Service]
+Type=simple
+User=aelma
+Group=aelma
+WorkingDirectory=/opt/aelma
+Environment="PATH=/opt/aelma/.venv/bin:/usr/bin"
+ExecStart=/opt/aelma/.venv/bin/python -m bridge --tcp-port 8001 --ws-port 8000
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/var/log/aelma/bridge.log
+StandardError=append:/var/log/aelma/bridge.log
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/aelma /var/lib/aelma
+
+[Install]
+WantedBy=multi-user.target

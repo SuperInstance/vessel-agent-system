@@ -29,6 +29,10 @@ def main() -> None:
                         help="Seconds between bathymetry saves.")
     parser.add_argument("--viewport-radius-m", type=float, default=500.0,
                         help="Bathymetry viewport radius in meters.")
+    parser.add_argument("--health-port", type=int, default=8091,
+                        help="Port for the health HTTP server (/health, /ready, /live).")
+    parser.add_argument("--metrics-port", type=int, default=9090,
+                        help="Port for the Prometheus /metrics endpoint (0 disables).")
     parser.add_argument("--verbose", action="store_true",
                         help="Enable debug logging.")
     args = parser.parse_args()
@@ -46,6 +50,8 @@ def main() -> None:
         broadcast_interval=args.broadcast_interval,
         persist_interval=args.persist_interval,
         viewport_radius_m=args.viewport_radius_m,
+        health_port=args.health_port,
+        metrics_port=args.metrics_port or None,
     )
     try:
         asyncio.run(core.run())

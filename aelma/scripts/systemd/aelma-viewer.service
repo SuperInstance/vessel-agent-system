@@ -1,0 +1,26 @@
+[Unit]
+Description=AELMA Viewer
+Documentation=https://github.com/SuperInstance/aelma
+After=network.target
+
+[Service]
+Type=simple
+User=aelma
+Group=aelma
+WorkingDirectory=/opt/aelma/build_kimi_viewer
+Environment="PATH=/opt/aelma/.venv/bin:/usr/bin"
+ExecStart=/opt/aelma/.venv/bin/python serve.py --port 8080
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/var/log/aelma/viewer.log
+StandardError=append:/var/log/aelma/viewer.log
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/aelma /var/lib/aelma /opt/aelma/build_kimi_viewer
+
+[Install]
+WantedBy=multi-user.target
