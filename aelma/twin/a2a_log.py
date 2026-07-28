@@ -103,13 +103,34 @@ class A2ALog:
         append. An existing file is appended to; ``_seq`` continues from
         the line count of the existing file so sequences stay monotonic
         across restarts.
+    max_bytes:
+        Rotate log files after they reach this size. Disabled (``None``) by
+        default. When enabled, the current file is renamed to ``.1`` and a
+        new file is started. Older rotations are numbered ``.2``, ``.3``,
+        etc. Only the most recent ``keep`` files are kept.
+    keep:
+        Number of rotated files to keep when ``max_bytes`` is set. Default 5.
+        Must be at least 1.
     """
 
-    def __init__(self, path: str | Path) -> None:
+    def __init__(
+        self,
+        path: str | Path,
+        *,
+        max_bytes: int | None = None,
+        keep: int = 5,
+    ) -> None:
+        if max_bytes is not None and max_bytes <= 0:
+            raise ValueError("A2ALog: max_bytes must be positive or None")
+        if keep < 1:
+            raise ValueError("A2ALog: keep must be at least 1")
         self._path = Path(path)
+        self._max_bytes = max_bytes
+        self._keep = keep
         self._lock = asyncio.Lock()
         self._closed = False
         self._seq = self._count_existing_lines()
+        self._current_size = self._measure_file_size()
 
     @property
     def path(self) -> Path:
@@ -133,6 +154,66 @@ class A2ALog:
         except OSError as exc:  # unreadable file: start fresh, don't crash
             log.warning("A2ALog: could not scan %s for seq resume: %s", self._path, exc)
             return 0
+
+    def _measure_file_size(self) -> int:
+        """Return current file size in bytes, or 0 if missing."""
+        try:
+            return self._path.stat().st_size
+        except FileNotFoundError:
+            return 0
+        except OSError as exc:
+            log.warning("A2ALog: could not stat %s: %s", self._path, exc)
+            return 0
+
+    def _maybe_rotate(self, next_line_bytes: int = 0) -> None:
+        """Rotate the log file if it has exceeded (or will exceed) max_bytes.
+
+        Parameters
+        ----------
+        next_line_bytes:
+            Size of the line about to be written. Used to check if the line
+            itself will cause the file to exceed max_bytes.
+        """
+        if self._max_bytes is None:
+            return
+        # Rotate if we're already at/over the limit, or if adding the next line will exceed it
+        if self._current_size >= self._max_bytes or (next_line_bytes > 0 and self._current_size + next_line_bytes > self._max_bytes):
+            pass  # Proceed with rotation
+        else:
+            return
+
+        log.debug("A2ALog: rotation triggered: size=%d, next=%d, max=%d",
+                 self._current_size, next_line_bytes, self._max_bytes)
+
+        # Perform rotation: .N files shift up, oldest is deleted
+        # Existing: current.jsonl -> current.jsonl.1
+        #           current.jsonl.1 -> current.jsonl.2
+        #           ...
+        #           current.jsonl.(keep-1) -> current.jsonl.keep
+        #           current.jsonl.keep -> deleted
+        try:
+            # Delete the oldest file if it exists
+            oldest = self._path.parent / f"{self._path.name}.{self._keep}"
+            oldest.unlink(missing_ok=True)
+
+            # Shift existing rotated files (only if they exist)
+            for i in range(self._keep - 1, 0, -1):
+                old_rotated = self._path.parent / f"{self._path.name}.{i}"
+                if old_rotated.exists():
+                    new_rotated = self._path.parent / f"{self._path.name}.{i + 1}"
+                    old_rotated.rename(new_rotated)
+
+            # Rotate current file to .1 (only if it exists)
+            if self._path.exists():
+                rotated = self._path.parent / f"{self._path.name}.1"
+                self._path.rename(rotated)
+                self._current_size = 0
+                log.info("A2ALog: rotated %s to %s", self._path, rotated)
+            else:
+                log.warning("A2ALog: rotation requested but current file doesn't exist")
+        except OSError as exc:
+            log.error("A2ALog: rotation failed: %s", exc)
+            # Continue with current file on rotation failure
 
     async def append(
         self,
@@ -196,8 +277,25 @@ class A2ALog:
     def _write_line(self, record: dict[str, Any]) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         line = json.dumps(record, ensure_ascii=False, default=str)
+        line_bytes = (len(line) + 1)  # +1 for newline
+
+        # Check if we need to rotate before writing
+        rotated = False
+        if self._max_bytes is not None:
+            should_rotate = self._current_size >= self._max_bytes or self._current_size + line_bytes > self._max_bytes
+            if should_rotate:
+                self._maybe_rotate(line_bytes)
+                rotated = True
+
         with self._path.open("a", encoding="utf-8") as fh:
             fh.write(line + "\n")
+
+        # Only add to size if we didn't just rotate (rotation resets to 0)
+        if not rotated:
+            self._current_size += line_bytes
+        else:
+            # After rotation, track the size of the new line
+            self._current_size = line_bytes
 
     async def close(self) -> None:
         """Mark the log closed. Later appends raise ``RuntimeError``."""
@@ -210,6 +308,9 @@ class A2ALog:
             "path": str(self._path),
             "records": self._seq,
             "closed": self._closed,
+            "size_bytes": self._current_size,
+            "max_bytes": self._max_bytes,
+            "keep": self._keep,
         }
 
     async def __aenter__(self) -> "A2ALog":

@@ -313,3 +313,25 @@ class A2AQuery:
             }
             for start in sorted(buckets)
         ]
+
+    async def recent(
+        self,
+        limit: int = 10,
+        filters: Mapping[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return the most recent matching records in reverse chronological order.
+
+        This is a convenience method that queries all matching records and
+        returns the last N, sorted by ``ts`` descending. For large logs,
+        consider using time-bounded filters instead.
+        """
+        if limit <= 0:
+            return []
+        all_records = await self.query(filters)
+        # Sort by timestamp descending (most recent first)
+        sorted_records = sorted(
+            all_records,
+            key=lambda r: r.get("ts", ""),
+            reverse=True,
+        )
+        return sorted_records[:limit]

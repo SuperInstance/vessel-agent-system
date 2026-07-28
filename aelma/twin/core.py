@@ -21,6 +21,7 @@ from typing import Any
 
 import websockets
 
+from .a2a_log import A2ALog
 from .bathymetry import BathymetryGrid
 from .state import VesselState
 
@@ -50,6 +51,9 @@ class TwinCore:
         broadcast_interval: float = 1.0,
         persist_interval: float = 60.0,
         viewport_radius_m: float = 500.0,
+        a2a_log_path: str | Path = "a2a.jsonl",
+        a2a_max_bytes: int | None = None,
+        a2a_keep: int = 5,
     ) -> None:
         """Configure the twin; nothing connects until :meth:`run` is awaited."""
         self.bridge_url = bridge_url
@@ -59,14 +63,39 @@ class TwinCore:
         self.broadcast_interval = broadcast_interval
         self.persist_interval = persist_interval
         self.viewport_radius_m = viewport_radius_m
+        self.a2a_log_path = Path(a2a_log_path)
 
         self.state = VesselState()
         self.bathymetry = BathymetryGrid()
         self._viewers: set[Any] = set()
+        self.a2a_log = A2ALog(self.a2a_log_path, max_bytes=a2a_max_bytes, keep=a2a_keep)
 
     # ------------------------------------------------------------------ #
     # Packet handling
     # ------------------------------------------------------------------ #
+    async def log_action(
+        self,
+        action: str,
+        payload: dict[str, Any] | None = None,
+        *,
+        source: str = "system",
+        reason: str = "",
+        priority: float = 0.5,
+    ) -> dict[str, Any]:
+        """Log an A2A action to the action log.
+
+        This is the main entry point for logging watcher-fired actions,
+        LLM-issued actions, or crew-entered actions. Returns the logged
+        record as written (including generated fields like _seq and _loggedAt).
+        """
+        return await self.a2a_log.append(
+            action,
+            payload,
+            source=source,
+            reason=reason,
+            priority=priority,
+        )
+
     def handle_packet(self, packet: dict[str, Any]) -> None:
         """Apply one TelemetryPacket to state and, if a sounding, the grid."""
         self.state.apply_packet(packet)
