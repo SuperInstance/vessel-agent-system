@@ -9,6 +9,7 @@ from .bathymetry import BathymetryGrid
 from .catch_log import CatchLog
 from .circuit_breaker import CircuitBreaker, CircuitBreakerOpen, State
 from .core import TwinCore
+from .gear_tracker import GearTracker
 from .llm_narrator import Narrator
 from .plugins import Plugin, PluginContext, PluginManager
 from .route_optimizer import RouteOptimizer
@@ -33,6 +34,7 @@ __all__ = [
     "CatchLog",
     "CircuitBreaker",
     "CircuitBreakerOpen",
+    "GearTracker",
     "Narrator",
     "Plugin",
     "PluginContext",
