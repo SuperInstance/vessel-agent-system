@@ -6,10 +6,12 @@ from .a2a_log import A2ALog, DEFAULT_PRIORITY, KIND_ACTION, VALID_SOURCES
 from .a2a_query import A2AQuery, KNOWN_FILTERS
 from .anomaly_detector import AnomalyDetector, ChannelStats
 from .bathymetry import BathymetryGrid
+from .catch_log import CatchLog
 from .circuit_breaker import CircuitBreaker, CircuitBreakerOpen, State
 from .core import TwinCore
 from .llm_narrator import Narrator
 from .plugins import Plugin, PluginContext, PluginManager
+from .route_optimizer import RouteOptimizer
 from .state import VesselState, bearing_deg, haversine_m
 from .stratified_sampler import SampleBin, StratifiedSampler, TrainingExample
 from .trip_summary import TripSummary
@@ -28,12 +30,14 @@ __all__ = [
     "KNOWN_FILTERS",
     # Core
     "BathymetryGrid",
+    "CatchLog",
     "CircuitBreaker",
     "CircuitBreakerOpen",
     "Narrator",
     "Plugin",
     "PluginContext",
     "PluginManager",
+    "RouteOptimizer",
     "SampleBin",
     "State",
     "StratifiedSampler",
