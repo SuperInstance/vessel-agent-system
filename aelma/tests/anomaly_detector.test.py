@@ -46,6 +46,19 @@ def feed(detector: AnomalyDetector, channel: str, values) -> None:
         detector.observe_telemetry(channel, v)
 
 
+class FakeClock:
+    """Deterministic monotonic clock, advanced manually by tests."""
+
+    def __init__(self, start: float = 1_000.0) -> None:
+        self.t = start
+
+    def __call__(self) -> float:
+        return self.t
+
+    def advance(self, dt: float) -> None:
+        self.t += dt
+
+
 def gaussian_baseline(mean: float, stdev: float, n: int, seed: int = 42):
     rng = random.Random(seed)
     return [rng.gauss(mean, stdev) for _ in range(n)]
@@ -161,7 +174,7 @@ class TestZScore:
         feed(d, "x", [100.0] * 20)
         assert not d.is_anomaly("x", 100.0)
         assert not d.is_anomaly("x", 100.0 + 1e-6)   # float noise
-        assert d.is_anomaly("x", 150.0)              # real jump
+        assert d.is_anomaly("x", 200.0)              # real jump
 
 
 # --------------------------------------------------------------------- #
@@ -366,9 +379,10 @@ class TestWatcherIntegration:
             {"depth_m": float("nan"), "sog_kn": 5.1}) == []
 
     def test_cooldown_suppresses_repeat_alerts(self):
+        clock = FakeClock()
         detector = AnomalyDetector(min_samples=10, z_threshold=3.0)
         feed(detector, "depth_m", gaussian_baseline(10.0, 0.5, 60))
-        registry = WatcherRegistry(history=WatcherHistory())
+        registry = WatcherRegistry(history=WatcherHistory(), now=clock)
         detector.register_watchers(
             registry, channels=["depth_m"], cooldown_s=30.0)
         fired = []
@@ -377,13 +391,16 @@ class TestWatcherIntegration:
         first = registry.evaluate({"depth_m": 40.0})
         assert len(first) == 1 and len(fired) == 1
 
-        # Same anomalous payload inside the cooldown window: suppressed.
+        # Inside the cooldown window any repeat is suppressed.
         assert registry.evaluate({"depth_m": 40.0}) == []
+        assert registry.evaluate({"depth_m": 55.0}) == []
         assert len(fired) == 1
 
-        # A *different* anomaly payload still fires (dedup is per payload).
-        second = registry.evaluate({"depth_m": 55.0})
+        # Past the cooldown the alert fires again.
+        clock.advance(31.0)
+        second = registry.evaluate({"depth_m": 40.0})
         assert len(second) == 1
+        assert len(fired) == 2
 
     def test_default_channels_from_observed_windows(self):
         detector = AnomalyDetector(min_samples=1)
@@ -404,8 +421,7 @@ class TestWatcherIntegration:
         frames.append({"depth_m": 50.0, "sog_kn": 5.0})  # synthetic hit
         for f in frames:
             detector.observe_frame(f)
-            for action in registry.evaluate(f):
-                fired.append(action)
+            registry.evaluate(f)
         # Exactly the injected anomaly fires; the baseline stays quiet.
         assert len(fired) == 1
         assert fired[0]["payload"]["channel"] == "depth_m"

@@ -28,6 +28,7 @@ import websockets
 from .bathymetry import BathymetryGrid
 from .fishing_modes import FishingMode, FishingModeManager
 from .state import VesselState
+from .trip_summary import TripSummary
 
 log = logging.getLogger("aelma.twin")
 
@@ -367,6 +368,7 @@ class TwinCore:
         self.state = VesselState()
         self.bathymetry = BathymetryGrid()
         self.fishing_modes = FishingModeManager(initial_mode=FishingMode.TRANSIT)
+        self.trip_summary = TripSummary(vessel_id=vessel_id)
         self._viewers: set[Any] = set()
         self._telemetry_log_file: Any | None = None
 
@@ -690,6 +692,15 @@ class TwinCore:
             mode: New mode (FishingMode enum or string value).
             reason: Human-readable explanation for the mode change.
         """
+        # Get previous mode statistics before changing
+        if self.fishing_modes._current_mode:
+            prev_mode = self.fishing_modes._current_mode
+            mode_stats = self.fishing_modes.get_time_in_mode(prev_mode)
+            duration_ns = mode_stats.get("total_duration_ns", 0)
+            entries = mode_stats.get("entry_count", 0)
+            # Accumulate into trip summary
+            self.trip_summary.add_mode_duration(prev_mode.value, duration_ns, entries)
+
         self.fishing_modes.set_mode(mode, reason)
         log.info("fishing mode set to %s: %s", mode, reason)
 
@@ -719,6 +730,69 @@ class TwinCore:
             Dict with per-mode statistics and summary information.
         """
         return self.fishing_modes.get_statistics()
+
+    # ------------------------------------------------------------------ #
+    # Trip summary
+    # ------------------------------------------------------------------ #
+    def get_trip_summary(self) -> dict[str, Any]:
+        """Get comprehensive trip summary.
+
+        Returns:
+            Dict with trip statistics including duration, distance,
+            depth stats, mode time, alerts, catch, fuel, and weather.
+        """
+        # Add current mode duration before generating summary
+        if self.fishing_modes._current_mode:
+            current_mode = self.fishing_modes._current_mode
+            mode_stats = self.fishing_modes.get_time_in_mode(current_mode)
+            # Use current_duration if available
+            duration_ns = mode_stats.get(
+                "current_duration_ns",
+                mode_stats.get("total_duration_ns", 0)
+            )
+            entries = mode_stats.get("entry_count", 0)
+            self.trip_summary.add_mode_duration(current_mode.value, duration_ns, entries)
+
+        return self.trip_summary.generate_summary()
+
+    def export_trip_summary(self, format: str = "json", path: str | Path | None = None) -> None:
+        """Export trip summary to file.
+
+        Args:
+            format: Export format - "json", "html", or "text".
+            path: Output file path. If None, generates default path.
+
+        Raises:
+            ValueError: If format is not supported.
+        """
+        if path is None:
+            path = f"trip_summary_{self.vessel_id}_{time.time_ns()}.{format}"
+
+        if format == "json":
+            self.trip_summary.export_json(path)
+        elif format == "html":
+            self.trip_summary.export_html(path)
+        elif format == "text":
+            self.trip_summary.export_text(path)
+        else:
+            raise ValueError(f"Unsupported export format: {format}. Use 'json', 'html', or 'text'.")
+
+        log.info("exported trip summary to %s", path)
+
+    def log_catch(self, species: str, weight_kg: float) -> None:
+        """Log catch data into trip summary.
+
+        Args:
+            species: Species name.
+            weight_kg: Catch weight in kilograms.
+        """
+        self.trip_summary.add_oplog_entry({
+            "action": "log_catch",
+            "timestamp_ns": time.time_ns(),
+            "species": species,
+            "weight_kg": weight_kg,
+        })
+        log.info("logged catch: %s %.2f kg", species, weight_kg)
 
     # ------------------------------------------------------------------ #
     # Telemetry logging
@@ -777,6 +851,7 @@ class TwinCore:
 
         Logs the packet to the telemetry JSONL file if logging is enabled.
         Evaluates watcher rules after state update if enabled.
+        Accumulates data into the trip summary.
 
         Args:
             packet: TelemetryPacket dict with timestamp_ns, source, channel,
@@ -784,6 +859,9 @@ class TwinCore:
         """
         # Log packet to telemetry file
         self._log_telemetry(packet)
+
+        # Accumulate into trip summary
+        self.trip_summary.add_telemetry(packet)
 
         # Apply to vessel state
         self.state.apply_packet(packet)
@@ -798,6 +876,9 @@ class TwinCore:
                         "watchers evaluated: %d actions fired",
                         len(fired_actions)
                     )
+                    # Accumulate fired actions into trip summary
+                    for action in fired_actions:
+                        self.trip_summary.add_a2a_action(action)
             except Exception as exc:
                 log.warning("watcher evaluation failed: %s", exc)
 

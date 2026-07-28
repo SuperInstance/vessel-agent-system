@@ -309,11 +309,11 @@ class AnomalyDetector:
     # ------------------------------------------------------------------ #
     def _zscore(self, x: float, stats: ChannelStats) -> dict[str, Any]:
         if stats.stdev <= _EPS:
-            # Zero-variance window: no z-score exists, so fall back to a
-            # relative-deviation ratio scaled by the z threshold — tiny
-            # float noise around a constant channel must not flag.
+            # Zero-variance window: no z-score exists, so fall back to the
+            # relative-deviation rule — tiny float noise around a constant
+            # channel must not flag, but a real jump must.
             dev = abs(x - stats.mean) / (abs(stats.mean) + _EPS)
-            ratio = dev / self.z_threshold
+            ratio = dev / self.ma_dev_threshold
             return {
                 "flagged": ratio > 1.0,
                 "ratio": ratio,
