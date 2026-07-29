@@ -40,6 +40,8 @@ from .oplog import OpLog
 from .quota_manager import QuotaManager
 from .report_generator import ReportGenerator, ReportSpec, ReportResult
 from .state import VesselState
+from .crew_fatigue import CrewFatigueMonitor
+from .equipment_monitor import EquipmentMonitor
 
 log = logging.getLogger("aelma.twin")
 
@@ -86,6 +88,10 @@ class TwinCore:
         quota_enabled: bool = True,
         mob_events_path: str | Path = "mob_events.jsonl",
         enable_mob: bool = True,
+        crew_fatigue_path: str | Path = "crew_fatigue",
+        enable_crew_fatigue: bool = True,
+        equipment_path: str | Path = "equipment",
+        enable_equipment: bool = True,
         report_storage_path: str | Path = "reports",
         report_template_path: str | Path = "twin/templates",
         smtp_host: str | None = None,
@@ -99,6 +105,8 @@ class TwinCore:
         self.viewer_port = viewer_port
         self.vessel_id = vessel_id
         self.bathymetry_path = Path(bathymetry_path)
+        self.crew_fatigue_path = Path(crew_fatigue_path)
+        self.equipment_path = Path(equipment_path)
         self.broadcast_interval = broadcast_interval
         self.persist_interval = persist_interval
         self.viewport_radius_m = viewport_radius_m
@@ -181,6 +189,18 @@ class TwinCore:
         self.mob = MOBDetector(
             storage_path=self.mob_events_path
         ) if enable_mob else None
+
+        # Crew fatigue monitoring system
+        self.crew_fatigue = CrewFatigueMonitor(
+            vessel_id=self.vessel_id,
+            data_dir=self.crew_fatigue_path
+        ) if enable_crew_fatigue else None
+
+        # Equipment monitoring system
+        self.equipment = EquipmentMonitor(
+            data_dir=self.equipment_path,
+            enable_persistence=True
+        ) if enable_equipment else None
 
     # ------------------------------------------------------------------ #
     # Packet handling
@@ -444,6 +464,14 @@ class TwinCore:
         # Add MOB status if enabled
         if self.mob is not None:
             snap["mob"] = self.mob.to_dict()
+
+        # Add crew fatigue status if enabled
+        if self.crew_fatigue is not None:
+            snap["crew_fatigue"] = self.crew_fatigue.to_dict()
+
+        # Add equipment status if enabled
+        if self.equipment is not None:
+            snap["equipment"] = self.equipment.to_dict()
 
         return snap
 

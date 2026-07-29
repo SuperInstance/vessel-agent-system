@@ -357,9 +357,14 @@ async def test_generate_report_html(mock_generator: ReportGenerator) -> None:
     assert result.status == "complete"
     assert result.spec == spec
     assert result.size_bytes > 0
-    assert isinstance(result.content, str)
-    assert "<!DOCTYPE html>" in result.content
-    assert spec.title in result.content
+    assert result.file_path is not None
+    assert Path(result.file_path).exists()
+
+    # Read and verify file content
+    with open(result.file_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    assert "<!DOCTYPE html>" in content
+    assert spec.title in content
 
 
 @pytest.mark.asyncio
@@ -470,10 +475,16 @@ async def test_generate_report_pdf_fallback(mock_generator: ReportGenerator) -> 
 
     result = await mock_generator.generate_report(spec)
 
-    # Should complete but with HTML content
+    # Should complete but save as HTML file
     assert result.status == "complete"
-    assert result.content
-    assert "<!DOCTYPE html>" in result.content
+    assert result.file_path is not None
+    # PDF is saved as HTML with warning
+    assert result.file_path.endswith('.html')
+
+    # Read and verify file content
+    with open(result.file_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    assert "<!DOCTYPE html>" in content
 
 
 # ======================================================================== #
@@ -572,7 +583,7 @@ def test_compute_statistics_empty_data() -> None:
     """Test statistics computation with empty data."""
     generator = ReportGenerator(storage_path="test")
     spec = ReportSpec(
-        report_type="test",
+        report_type="daily",
         title="Test",
         start_time=datetime.now(timezone.utc),
         end_time=datetime.now(timezone.utc) + timedelta(hours=1),
@@ -713,7 +724,7 @@ def test_get_report(mock_generator: ReportGenerator) -> None:
     result = ReportResult(
         report_id="test-id",
         spec=ReportSpec(
-            report_type="test",
+            report_type="daily",
             title="Test",
             start_time=datetime.now(timezone.utc),
             end_time=datetime.now(timezone.utc) + timedelta(hours=1),
@@ -823,7 +834,7 @@ def test_delete_report(mock_generator: ReportGenerator, temp_storage: Path) -> N
     result = ReportResult(
         report_id="test-id",
         spec=ReportSpec(
-            report_type="test",
+            report_type="daily",
             title="Test",
             start_time=datetime.now(timezone.utc),
             end_time=datetime.now(timezone.utc) + timedelta(hours=1),

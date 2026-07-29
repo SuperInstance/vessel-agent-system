@@ -183,9 +183,12 @@ class TestMOBDetectorInit:
 
     def test_init_default_path(self):
         """Initialize with default storage path."""
-        detector = MOBDetector()
-        assert detector.storage_path == Path("mob_events.jsonl")
-        assert detector.get_active_event() is None
+        # Use a temp file to avoid loading events from other tests
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "mob_events.jsonl"
+            detector = MOBDetector(storage_path=path)
+            assert detector.storage_path == path
+            assert detector.get_active_event() is None
 
     def test_init_custom_path(self):
         """Initialize with custom storage path."""
@@ -290,8 +293,9 @@ class TestMOBEventTriggering:
 
     def test_get_active_event_none(self):
         """get_active_event returns None when no active event."""
-        detector = MOBDetector()
-        assert detector.get_active_event() is None
+        with tempfile.TemporaryDirectory() as tmpdir:
+            detector = MOBDetector(storage_path=Path(tmpdir) / "mob.json")
+            assert detector.get_active_event() is None
 
     def test_get_event_by_id(self):
         """Retrieve specific event by ID."""
@@ -408,9 +412,10 @@ class TestPositionTracking:
 
     def test_calculate_mob_position_no_active_event(self):
         """Calculate MOB position returns None when no active event."""
-        detector = MOBDetector()
-        result = detector.calculate_mob_position()
-        assert result is None
+        with tempfile.TemporaryDirectory() as tmpdir:
+            detector = MOBDetector(storage_path=Path(tmpdir) / "mob.json")
+            result = detector.calculate_mob_position()
+            assert result is None
 
     def test_bearing_distance_to_mob(self):
         """Calculate bearing and distance to MOB."""
@@ -442,11 +447,12 @@ class TestPositionTracking:
 
     def test_bearing_distance_no_active_event(self):
         """Bearing/distance returns None when no active event."""
-        detector = MOBDetector()
-        detector.update_vessel_position(SITKA_LAT, SITKA_LON, 0.0, 0.0)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            detector = MOBDetector(storage_path=Path(tmpdir) / "mob.json")
+            detector.update_vessel_position(SITKA_LAT, SITKA_LON, 0.0, 0.0)
 
-        result = detector.get_bearing_distance_to_mob()
-        assert result is None
+            result = detector.get_bearing_distance_to_mob()
+            assert result is None
 
 
 # --------------------------------------------------------------------- #
@@ -481,10 +487,11 @@ class TestDriftEstimation:
 
     def test_drift_estimate_no_active_event(self):
         """Drift estimate raises error without active event."""
-        detector = MOBDetector()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            detector = MOBDetector(storage_path=Path(tmpdir) / "mob.json")
 
-        with pytest.raises(RuntimeError, match="No active MOB event"):
-            detector.update_drift_estimate(180.0, 1.0, 270.0, 10.0)
+            with pytest.raises(RuntimeError, match="No active MOB event"):
+                detector.update_drift_estimate(180.0, 1.0, 270.0, 10.0)
 
     def test_drift_leeway_calculation(self):
         """Leeway is ~0.20 of wind speed, downwind."""
@@ -644,12 +651,13 @@ class TestSearchPatterns:
 
     def test_generate_pattern_no_active_event(self):
         """Pattern generation raises error without active event."""
-        detector = MOBDetector()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            detector = MOBDetector(storage_path=Path(tmpdir) / "mob.json")
 
-        with pytest.raises(RuntimeError, match="No active MOB event"):
-            detector.generate_search_pattern(
-                pattern_type=SearchPatternType.EXPANDING_SQUARE
-            )
+            with pytest.raises(RuntimeError, match="No active MOB event"):
+                detector.generate_search_pattern(
+                    pattern_type=SearchPatternType.EXPANDING_SQUARE
+                )
 
     def test_generate_pattern_invalid_type(self):
         """Invalid pattern type raises error."""
@@ -694,15 +702,16 @@ class TestSearchSectors:
 
     def test_assign_sector_no_active_event(self):
         """Sector assignment raises error without active event."""
-        detector = MOBDetector()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            detector = MOBDetector(storage_path=Path(tmpdir) / "mob.json")
 
-        with pytest.raises(RuntimeError, match="No active MOB event"):
-            detector.assign_search_sector(
-                vessel_id="vessel_x",
-                pattern_type=SearchPatternType.EXPANDING_SQUARE,
-                center_lat=SITKA_LAT,
-                center_lon=SITKA_LON,
-            )
+            with pytest.raises(RuntimeError, match="No active MOB event"):
+                detector.assign_search_sector(
+                    vessel_id="vessel_x",
+                    pattern_type=SearchPatternType.EXPANDING_SQUARE,
+                    center_lat=SITKA_LAT,
+                    center_lon=SITKA_LON,
+                )
 
     def test_sector_stored_in_event(self):
         """Assigned sectors are stored in event."""
@@ -811,7 +820,7 @@ class TestAnalytics:
         assert stats["vessels_participating"] == 1
 
     def test_calculate_pod_pos(self):
-    """Calculate POD and POS probabilities."""
+        """Calculate POD and POS probabilities."""
         detector = MOBDetector()
         detector.update_vessel_position(SITKA_LAT, SITKA_LON, 0.0, 0.0)
 
@@ -859,32 +868,34 @@ class TestIntegration:
 
     def test_to_dict(self):
         """Export detector state as dictionary."""
-        detector = MOBDetector()
-        detector.update_vessel_position(SITKA_LAT, SITKA_LON, 90.0, 5.5)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            detector = MOBDetector(storage_path=Path(tmpdir) / "mob.json")
+            detector.update_vessel_position(SITKA_LAT, SITKA_LON, 90.0, 5.5)
 
-        event = detector.trigger_mob_alert(
-            SITKA_LAT, SITKA_LON, DetectionMethod.MANUAL, "grace"
-        )
+            event = detector.trigger_mob_alert(
+                SITKA_LAT, SITKA_LON, DetectionMethod.MANUAL, "grace"
+            )
 
-        state = detector.to_dict()
+            state = detector.to_dict()
 
-        assert "active_event" in state
-        assert state["active_event"] is not None
-        assert state["active_event"]["event_id"] == event.event_id
-        assert state["total_events"] == 1
-        assert state["vessel_state"]["lat"] == SITKA_LAT
+            assert "active_event" in state
+            assert state["active_event"] is not None
+            assert state["active_event"]["event_id"] == event.event_id
+            assert state["total_events"] == 1
+            assert state["vessel_state"]["lat"] == SITKA_LAT
 
     def test_get_watcher_frame_no_event(self):
         """Watcher frame returns inactive when no event."""
-        detector = MOBDetector()
-        detector.update_vessel_position(SITKA_LAT, SITKA_LON, 0.0, 0.0)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            detector = MOBDetector(storage_path=Path(tmpdir) / "mob.json")
+            detector.update_vessel_position(SITKA_LAT, SITKA_LON, 0.0, 0.0)
 
-        frame = detector.get_watcher_frame()
+            frame = detector.get_watcher_frame()
 
-        assert frame["mob_active"] is False
-        assert frame["mob_event_id"] is None
-        assert frame["mob_lat"] is None
-        assert frame["mob_alert_critical"] is False
+            assert frame["mob_active"] is False
+            assert frame["mob_event_id"] is None
+            assert frame["mob_lat"] is None
+            assert frame["mob_alert_critical"] is False
 
     def test_get_watcher_frame_active_event(self):
         """Watcher frame returns active event data."""
@@ -933,7 +944,7 @@ class TestIntegration:
         assert alerts[0]["type"] == "mob_active"
         assert alerts[0]["severity"] == "critical"
         assert alerts[0]["priority"] == pytest.approx(1.0, abs=0.01)
-        assert alerts[0]["distance_m"] < 50
+        assert alerts[0]["data"]["distance_m"] < 50
 
     def test_get_alerts_medium_distance(self):
         """Warning alert for medium distance."""

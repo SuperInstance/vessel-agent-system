@@ -959,7 +959,7 @@ class QuotaManager:
         if self._quota_path is None:
             return
 
-        self._base_path.parent.mkdir(parents=True, exist_ok=True)
+        self._quota_path.parent.mkdir(parents=True, exist_ok=True)
 
         record = {
             "kind": KIND_QUOTA,
@@ -978,7 +978,7 @@ class QuotaManager:
         if self._catch_path is None:
             return
 
-        self._base_path.parent.mkdir(parents=True, exist_ok=True)
+        self._catch_path.parent.mkdir(parents=True, exist_ok=True)
 
         record = {
             "kind": KIND_CATCH,

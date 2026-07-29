@@ -373,15 +373,14 @@ class ReportGenerator:
                 file_name = f"{spec.report_type}_{spec.start_dt.strftime('%Y%m%d')}_{spec.end_dt.strftime('%Y%m%d')}_{report_id[:8]}{file_ext}"
                 file_path = self.storage_path / file_name
 
-                if spec.format in {"pdf", "html"}:
-                    # Save to file for binary/large formats
-                    await self._save_report(file_path, content, spec.format)
-                    result.file_path = str(file_path)
-                    result.size_bytes = file_path.stat().st_size
-                else:
-                    # Keep text formats in memory
+                # Save content to file for all formats
+                saved_path = await self._save_report(file_path, content, spec.format)
+                result.file_path = str(saved_path)
+                result.size_bytes = saved_path.stat().st_size
+
+                # Also keep content in memory for small formats
+                if spec.format in {"json", "csv", "xml", "md"}:
                     result.content = content
-                    result.size_bytes = len(content.encode('utf-8'))
 
                 result.status = "complete"
                 log.info("Report generated: %s (%s)", report_id, spec.format)
@@ -655,7 +654,7 @@ class ReportGenerator:
             lats = [p.get("value", 0) for p in positions if p.get("channel") == "position.lat"]
             lons = [p.get("value", 0) for p in positions if p.get("channel") == "position.lon"]
 
-            if lats:
+            if lats and lons:
                 stats["position"] = {
                     "lat_range": {"min": min(lats), "max": max(lats)},
                     "lon_range": {"min": min(lons), "max": max(lons)},
@@ -683,7 +682,7 @@ class ReportGenerator:
 
         # Telemetry statistics
         telemetry = data.get("telemetry", {})
-        if telemetry:
+        if telemetry and isinstance(telemetry, dict):
             stats["telemetry"] = {}
 
             for channel, readings in telemetry.items():
@@ -1223,6 +1222,9 @@ class ReportGenerator:
             f.write(content)
 
         log.info("Report saved to %s", file_path)
+
+        # Update the path to reflect actual saved file
+        return file_path
 
     # ------------------------------------------------------------------ #
     # Scheduling

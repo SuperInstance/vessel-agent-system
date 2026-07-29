@@ -400,7 +400,7 @@ class TestQuotaManagement:
         qm = QuotaManager(storage_path=None)
         assert qm.remove_species_quota("tuna") is False
 
-    def test_transfer_quota(self):
+    def test_transfer_quota(self, tmp_path):
         qm = QuotaManager(storage_path=tmp_path)
         transfer = qm.transfer_quota(
             from_vessel="US-AK-VESSEL1",
@@ -616,7 +616,8 @@ class TestAnalytics:
         qm = QuotaManager(storage_path=None)
         qm.set_species_quota("chinook", 1000.0)
 
-        # Log catches over 10 hours
+        # Log catches over 10 hours ending at current time
+        now = _now_ns()
         for i in range(10):
             qm.log_catch(
                 "chinook",
@@ -624,7 +625,7 @@ class TestAnalytics:
                 SITKA_LAT,
                 SITKA_LON,
                 "purse_seine",
-                timestamp_ns=T0 + i * 3600_000_000_000,
+                timestamp_ns=now - (9 - i) * 3600_000_000_000,
             )
 
         # Rate should be 100 lb / 24 hr = 4.17 lb/hr (window covers all catches)
@@ -635,8 +636,9 @@ class TestAnalytics:
         qm = QuotaManager(storage_path=None)
         qm.set_species_quota("chinook", 1000.0)
 
-        catch1 = qm.log_catch("chinook", 100.0, SITKA_LAT, SITKA_LON, "purse_seine", timestamp_ns=T0)
-        catch2 = qm.log_catch("chinook", 50.0, SITKA_LAT, SITKA_LON, "purse_seine", timestamp_ns=T0 + 1)
+        now = _now_ns()
+        catch1 = qm.log_catch("chinook", 100.0, SITKA_LAT, SITKA_LON, "purse_seine", timestamp_ns=now)
+        catch2 = qm.log_catch("chinook", 50.0, SITKA_LAT, SITKA_LON, "purse_seine", timestamp_ns=now + 1)
         qm.log_release(catch1.catch_id, "size_limit")
 
         # Only catch2 counts (50 lb)
@@ -645,9 +647,10 @@ class TestAnalytics:
 
     def test_project_exhaustion_date(self):
         qm = QuotaManager(storage_path=None)
-        qm.set_species_quota("chinook", 1000.0, reserve_percent=10.0)
+        qm.set_species_quota("chinook", 2000.0, reserve_percent=10.0)
 
-        # Catch at 100 lb/hr
+        # Catch at 100 lb/hr ending at current time
+        now = _now_ns()
         for i in range(10):
             qm.log_catch(
                 "chinook",
@@ -655,12 +658,12 @@ class TestAnalytics:
                 SITKA_LAT,
                 SITKA_LON,
                 "purse_seine",
-                timestamp_ns=T0 + i * 3600_000_000_000,
+                timestamp_ns=now - (9 - i) * 3600_000_000_000,
             )
 
         projection = qm.project_exhaustion_date("chinook")
         assert projection is not None
-        # Should project based on 100 lb/hr over 900 usable lb = 9 hours
+        # Should project based on 100 lb/hr over 1800 usable lb remaining = 18 hours
 
     def test_project_exhaustion_already_exhausted(self):
         qm = QuotaManager(storage_path=None)
