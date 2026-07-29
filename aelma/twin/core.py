@@ -42,6 +42,7 @@ from .report_generator import ReportGenerator, ReportSpec, ReportResult
 from .state import VesselState
 from .crew_fatigue import CrewFatigueMonitor
 from .equipment_monitor import EquipmentMonitor
+from .sensors.nmea_udp_capture import SensorCaptureCoordinator
 
 log = logging.getLogger("aelma.twin")
 
@@ -99,6 +100,10 @@ class TwinCore:
         smtp_user: str | None = None,
         smtp_password: str | None = None,
         smtp_from: str | None = None,
+        enable_sensors: bool = True,
+        nmea_port: int = 8001,
+        udp_depth_port: int = 50000,
+        sensor_output_dir: str | Path = "sensor_data",
     ) -> None:
         """Configure the twin; nothing connects until :meth:`run` is awaited."""
         self.bridge_url = bridge_url
@@ -118,6 +123,7 @@ class TwinCore:
         self.mob_events_path = Path(mob_events_path)
         self.report_storage_path = Path(report_storage_path)
         self.report_template_path = Path(report_template_path)
+        self.sensor_output_dir = Path(sensor_output_dir)
 
         self.state = VesselState()
         self.bathymetry = BathymetryGrid()
@@ -201,6 +207,16 @@ class TwinCore:
             data_dir=self.equipment_path,
             enable_persistence=True
         ) if enable_equipment else None
+
+        # Sensor capture coordinator for NMEA/UDP sensors
+        self.sensor_coordinator = SensorCaptureCoordinator(
+            nmea_jsonl=self.sensor_output_dir / "nmea_telemetry.jsonl",
+            depth_jsonl=self.sensor_output_dir / "depth_sounder.jsonl",
+            radar_jsonl=self.sensor_output_dir / "radar.jsonl",
+            log_path=self.sensor_output_dir / "sensor_capture.log",
+        ) if enable_sensors else None
+        self.nmea_port = nmea_port
+        self.udp_depth_port = udp_depth_port
 
     # ------------------------------------------------------------------ #
     # Packet handling
@@ -579,6 +595,16 @@ class TwinCore:
             if self.metrics_port is not None
             else None
         )
+
+        # Start sensor capture coordinator if enabled
+        sensor_tasks = []
+        if self.sensor_coordinator is not None:
+            log.info("Starting NMEA/UDP sensor capture coordinator")
+            self.sensor_coordinator.start_nmea_listener(port=self.nmea_port)
+            self.sensor_coordinator.start_udp_depth(port=self.udp_depth_port)
+            log.info("NMEA listener on port %d, UDP depth on port %d",
+                     self.nmea_port, self.udp_depth_port)
+
         try:
             async with websockets.serve(self._viewer_handler, "0.0.0.0", self.viewer_port):
                 log.info("viewer WS server listening on port %d", self.viewer_port)
@@ -593,6 +619,10 @@ class TwinCore:
                 await metrics_server.wait_closed()
             if self.health is not None:
                 await self.health.stop()
+            # Stop sensor coordinator if running
+            if self.sensor_coordinator is not None:
+                self.sensor_coordinator.stop_all()
+                log.info("Sensor capture coordinator stopped")
             # Final save on shutdown to prevent data loss
             self.bathymetry.save(self.bathymetry_path)
             log.info("bathymetry saved on shutdown")
