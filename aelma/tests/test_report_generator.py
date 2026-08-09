@@ -28,7 +28,7 @@ def temp_report_dir():
 def report_generator(temp_report_dir):
     """Create a ReportGenerator instance."""
     rg = ReportGenerator(storage_path=temp_report_dir)
-    return rg_generator
+    return rg
 
 
 @pytest.fixture

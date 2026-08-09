@@ -36,6 +36,15 @@ from .state import bearing_deg, haversine_m
 
 log = logging.getLogger("aelma.twin.mob_detector")
 
+
+class PositionValidationError(ValueError):
+    """Raised when MOB position coordinates are invalid."""
+
+
+class MOBInactiveError(RuntimeError):
+    """Raised when an operation requires an active MOB event but none exists."""
+
+
 # Constants
 M_PER_DEG_LAT = 111000.0
 KN_TO_MPS = 1852.0 / 3600.0
@@ -287,15 +296,15 @@ class MOBDetector:
         """
         # Validate position
         if not (-90 <= lat <= 90):
-            raise ValueError(f"Invalid latitude: {lat}. Must be -90 to 90.")
+            raise PositionValidationError(f"Invalid latitude: {lat}. Must be -90 to 90.")
         if not (-180 <= lon <= 180):
-            raise ValueError(f"Invalid longitude: {lon}. Must be -180 to 180.")
+            raise PositionValidationError(f"Invalid longitude: {lon}. Must be -180 to 180.")
 
         # Normalize detection method
         if isinstance(detection_method, DetectionMethod):
             detection_method = detection_method.value
         elif detection_method not in [m.value for m in DetectionMethod]:
-            log.warning("Unknown detection method: %s", detection_method)
+            raise ValueError(f"Unknown detection method: {detection_method}. Must be one of {[m.value for m in DetectionMethod]}")
 
         # Get vessel state at time of incident
         vessel_lat = self._vessel_state.get("lat")
@@ -392,8 +401,7 @@ class MOBDetector:
         """
         event = self._all_events.get(event_id)
         if event is None:
-            log.warning("Attempted to resolve unknown event: %s", event_id)
-            return None
+            raise ValueError(f"Event not found: {event_id}")
 
         valid_outcomes = ["rescued", "recovered", "false_alarm", "suspended"]
         if outcome not in valid_outcomes:
@@ -541,7 +549,7 @@ class MOBDetector:
             The computed drift estimate
         """
         if self._active_event is None:
-            raise RuntimeError("No active MOB event for drift estimate")
+            raise MOBInactiveError("No active MOB event for drift estimate")
 
         event = self._active_event
         now_ns = time.time_ns()
@@ -651,7 +659,7 @@ class MOBDetector:
             List of search legs with start/end positions and metadata
         """
         if self._active_event is None:
-            raise RuntimeError("No active MOB event for search pattern generation")
+            raise MOBInactiveError("No active MOB event for search pattern generation")
 
         # Normalize pattern type
         if isinstance(pattern_type, SearchPatternType):
@@ -883,7 +891,7 @@ class MOBDetector:
             The created search sector
         """
         if self._active_event is None:
-            raise RuntimeError("No active MOB event for sector assignment")
+            raise MOBInactiveError("No active MOB event for sector assignment")
 
         sector_id = f"{vessel_id}_{self._active_event.event_id}_{int(time.time())}"
         sector = SearchSector(

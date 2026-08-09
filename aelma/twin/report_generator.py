@@ -50,6 +50,10 @@ import aiohttp
 log = logging.getLogger("aelma.twin.report_generator")
 
 
+class ReportValidationError(ValueError):
+    """Raised when report specification validation fails."""
+
+
 def _utc_now() -> datetime:
     """Get current UTC time."""
     return datetime.now(timezone.utc)
@@ -123,9 +127,13 @@ class ReportSpec:
 
     def __post_init__(self):
         """Validate and normalize report specification."""
+        self.validate()
+
+    def validate(self) -> "ReportSpec":
+        """Validate this spec. Returns self if valid. Raises ReportValidationError otherwise."""
         valid_formats = {"pdf", "html", "json", "csv", "xml", "md"}
         if self.format not in valid_formats:
-            raise ValueError(
+            raise ReportValidationError(
                 f"ReportSpec: format must be one of {valid_formats}, got {self.format!r}"
             )
 
@@ -134,7 +142,7 @@ class ReportSpec:
             "weather", "performance", "compliance", "maintenance", "fleet"
         }
         if self.report_type not in valid_types:
-            raise ValueError(
+            raise ReportValidationError(
                 f"ReportSpec: report_type must be one of {valid_types}, got {self.report_type!r}"
             )
 
@@ -143,7 +151,9 @@ class ReportSpec:
         self._end_dt = _coerce_ts(self.end_time)
 
         if self._end_dt < self._start_dt:
-            raise ValueError("ReportSpec: end_time must be after start_time")
+            raise ReportValidationError("ReportSpec: end_time must be after start_time")
+
+        return self
 
     @property
     def start_dt(self) -> datetime:

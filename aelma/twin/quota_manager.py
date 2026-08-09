@@ -55,6 +55,14 @@ import logging
 import time
 import uuid
 from collections import deque
+
+
+class QuotaValidationError(ValueError):
+    """Raised when catch/quota input validation fails (negative weight, invalid species, etc)."""
+
+
+class QuotaExhaustedError(Exception):
+    """Raised when a catch would exceed the remaining quota."""
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -324,17 +332,27 @@ class QuotaManager:
         SpeciesQuota
             The created or updated quota object
         """
+        if total_limit_lb <= 0:
+            raise QuotaValidationError(f"total_limit_lb must be positive: {total_limit_lb}")
+
         if reserve_percent is None:
             reserve_percent = self.default_reserve_percent
 
-        quota = SpeciesQuota(
-            species=species,
-            total_limit_lb=float(total_limit_lb),
-            current_catch_lb=float(current_catch_lb),
-            reserve_percent=float(reserve_percent),
-            quota_source=quota_source,
-            expiry_date=expiry_date,
-        )
+        # Normalize datetime expiry to ISO string
+        if expiry_date is not None and hasattr(expiry_date, "isoformat"):
+            expiry_date = expiry_date.isoformat()
+
+        try:
+            quota = SpeciesQuota(
+                species=species,
+                total_limit_lb=float(total_limit_lb),
+                current_catch_lb=float(current_catch_lb),
+                reserve_percent=float(reserve_percent),
+                quota_source=quota_source,
+                expiry_date=expiry_date,
+            )
+        except ValueError as e:
+            raise QuotaValidationError(str(e)) from e
 
         self.quotas[species] = quota
         self._append_quota(quota)
@@ -464,8 +482,11 @@ class QuotaManager:
         lat: float,
         lon: float,
         gear_type: str,
-        timestamp_ns: int | None = None,
+        vessel_id: str | None = None,
+        *,
         crew_member: str | None = None,
+        timestamp_ns: int | None = None,
+        validate_quota: bool = False,
     ) -> CatchEvent:
         """Log a catch event and deduct from quota.
 
@@ -481,10 +502,14 @@ class QuotaManager:
             Longitude
         gear_type:
             Gear type (purse_seine, gillnet, pot, longline, etc.)
-        timestamp_ns:
-            Timestamp in nanoseconds (None for now)
+        vessel_id:
+            Vessel identifier (overrides default)
         crew_member:
             Crew member identifier
+        timestamp_ns:
+            Timestamp in nanoseconds (None for now)
+        validate_quota:
+            If True, raise QuotaExhaustedError instead of ValueError on quota overrun
 
         Returns
         -------
@@ -493,15 +518,34 @@ class QuotaManager:
 
         Raises
         ------
+        QuotaValidationError
+            If inputs are invalid (negative weight, invalid species, bad position)
+        QuotaExhaustedError
+            If validate_quota=True and catch exceeds remaining quota
         ValueError
-            If species quota doesn't exist or insufficient quota
+            If species quota doesn't exist or insufficient quota (validate_quota=False)
         """
+        # Input validation
+        if weight_lb <= 0:
+            raise QuotaValidationError(f"weight_lb must be positive: {weight_lb}")
+        if not (-90 <= lat <= 90):
+            raise QuotaValidationError(f"lat out of range: {lat}")
+        if not (-180 <= lon <= 180):
+            raise QuotaValidationError(f"lon out of range: {lon}")
+
         quota = self.quotas.get(species)
         if quota is None:
-            raise ValueError(f"No quota set for species: {species}")
+            raise QuotaValidationError(f"No quota set for species: {species}")
 
         # Check against usable quota (including reserve)
         if weight_lb > quota.usable_lb():
+            if validate_quota:
+                raise QuotaExhaustedError(
+                    f"Insufficient quota for {species}: "
+                    f"requesting {weight_lb} lb, "
+                    f"usable {quota.usable_lb():.2f} lb "
+                    f"(remaining {quota.remaining_lb():.2f} lb)"
+                )
             raise ValueError(
                 f"Insufficient quota for {species}: "
                 f"requesting {weight_lb} lb, "
@@ -518,7 +562,7 @@ class QuotaManager:
             lon=float(lon),
             timestamp_ns=int(timestamp_ns) if timestamp_ns is not None else _now_ns(),
             gear_type=gear_type,
-            vessel_id=self.vessel_id,
+            vessel_id=vessel_id or self.vessel_id,
             crew_member=crew_member,
         )
 
