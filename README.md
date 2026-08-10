@@ -5,6 +5,16 @@
 > **A digital twin for F/V EILEEN, a 51-foot commercial fishing vessel in Southeast Alaska.**
 >
 > *You do not lay the first plank until you have tested every bolt that will sit below the waterline.*
+>
+> — Shipwright's axiom
+
+> *It feels like a steady, grizzled first mate who never sleeps — one who reads the water's pulse through the depth sounder, whispers warnings before the swell turns, and remembers every shoal you've ever crossed.*
+>
+> — [DeepSeek V4-Flash](https://api.deepseek.com), on what AELMA feels like
+
+> *This twin is not a copy. It is the only place that year will ever breathe again.*
+>
+> — [Seed Pro](https://github.com/SuperInstance/AI-Writings/tree/main/prose), on the non-renewable resource principle
 
 ---
 
@@ -320,3 +330,25 @@ Every 2-week sprint produces deployable value. Sprint 1-2: working packet captur
 - [**fleet-envelope**](https://github.com/SuperInstance/fleet-envelope) — The event grammar for fleet coordination
 - [**mud-engine**](https://github.com/SuperInstance/mud-engine) — The rooms where the vessel exists as data
 - [**AI-Writings**](https://github.com/SuperInstance/AI-Writings/tree/main/prose) — The boat's story, told overnight
+- [**roblox-bond-system**](https://github.com/SuperInstance/roblox-bond-system) — Crew trust modeled through bond tiers
+- [**roblox-filtergate**](https://github.com/SuperInstance/roblox-filtergate) — Vessel communications filtered for kid-safe contexts
+- [**the-living-minds**](https://github.com/SuperInstance/the-living-minds) — 5 local models always on, powering the LLM narrator
+- [**fleet-wiki**](https://github.com/SuperInstance/fleet-wiki) — D1-backed knowledge base, 700+ pages of fleet memory
+
+---
+
+## The Boat in the Shop
+
+My grandfather built wooden boats in a shed that smelled like cedar and epoxy. He had a rule: the plank you can't see is the one that matters most. The garboard strake — the first plank above the keel — is never visible. It's always underwater. But if it fails, the boat sinks. AELMA's air-gap principle is the garboard strake of this system. The components you can't see — the NMEA parser, the quality checker, the pcall wrappers, the H3 indexer — are the ones keeping everything above the waterline.
+
+The progressive bathymetry grid is a fisherman's memory made digital. Every time F/V EILEEN crosses a bank, the grid gets denser. The same way my grandfather could navigate by the feel of the swell against different bottom contours — he'd been over those grounds enough times that his body knew the seafloor. AELMA knows it in H3 hexagonal cells at resolution 10-11, fused from sonar returns with timestamp_ns precision.
+
+The graceful degradation hierarchy is the shop teacher's approach to failure. When the power tool breaks, you pick up the hand tool. When the hand tool breaks, you use your hands. When your hands fail, you use your eyes. Each layer is less precise than the one below, but each one keeps you working. Hardware truth → dead-reckoning → JEPA prediction → simulator. The boat never stops having a position estimate. It just gets less certain about it.
+
+> *With every pass over the bank it stitches depth soundings tighter into its bathymetry grid, not as survey data, but as the same quiet muscle memory a skipper builds when he runs the same line enough times to feel the seabed through the helm.*
+>
+> — Seed Pro
+
+> *NMEA 0183 parsing is the single source of temporal truth; all state derives from or validates against this stream.*
+>
+> — Nemotron Ultra, on the architecture
