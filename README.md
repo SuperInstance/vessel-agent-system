@@ -1,156 +1,161 @@
-# Vessel Agent System - Knowledge Index
+# Vessel Agent System — AELMA
 
-**Vessel:** F/V EILEEN (51' Commercial Fishing Vessel)
-**Home Port:** Southeast Alaska
-**Primary Fishery:** Power Trolling
-**Development Start:** July 2026
-**Methodology:** BMAD (Bottom-up, Multi-level, Agile Development)
-
----
-
-## Quick Start for Agents
-
-**If you are a new agent session starting work on this system:**
-
-1. **Read this file first** (5 minutes)
-2. **Read the Memory Schema** (10 minutes) - `vessel_agent_memory_schema.json`
-3. **Read the Knowledge Base** (20 minutes) - `vessel_agent_knowledge_base.md`
-4. **Check the 5-Year Vision** (15 minutes) - `vessel_agent_5year_vision.md`
-5. **Review Current Status** (5 minutes) - Check implementation roadmap in schema
-
-**Total Context Loading Time:** ~1 hour
+> *Agent-Engine Linked Marine Architecture*
+>
+> **A digital twin for F/V EILEEN, a 51-foot commercial fishing vessel in Southeast Alaska.**
+>
+> *You do not lay the first plank until you have tested every bolt that will sit below the waterline.*
 
 ---
 
-## Knowledge Base Architecture
+## What This Is
 
-This directory contains the foundational knowledge for the vessel-agent system. All documents are designed to survive multiple context compactions and provide continuity across agent sessions.
+AELMA is a hardware-in-the-loop digital twin for a real fishing vessel. It ingests NMEA 0183 telemetry from GPS and sonar, fuses depth soundings into a [progressive bathymetry grid](aelma/twin/bathymetry.py), maintains a live [vessel state](aelma/twin/state.py), runs deterministic safety watchers, predicts equipment failure, detects anomalies, tracks crew fatigue, plans efficient routes, narrates its own actions in plain language, and renders a 3D view in any browser — all on the vessel LAN with zero internet dependency.
 
-### Core Documents (Read in Order)
+**334 files. 19,000+ lines of Python. 179 source files. 56 test files. Pure stdlib.**
 
-#### 1. README.md (This File)
-- Purpose: Entry point and index
-- Status: Current
-- Update Frequency: As needed
-
-#### 2. vessel_agent_memory_schema.json
-- Purpose: JSON schema for agent memory
-- Contains: All data structures, interfaces, success metrics
-- Critical For: System architecture understanding
-- Status: Current (v1.0.0)
-- When to Read: First thing in every new session
-
-#### 3. vessel_agent_knowledge_base.md
-- Purpose: Comprehensive technical knowledge base
-- Contains: Architecture, data schemas, API definitions, implementation roadmap
-- Critical For: Implementation details and technical decisions
-- Status: Current (v1.0.0)
-- When to Read: After schema, for deep technical understanding
-
-#### 4. vessel_agent_5year_vision.md
-- Purpose: Strategic roadmap with BMAD methodology
-- Contains: 5-year breakdown, success metrics, risk mitigation
-- Critical For: Long-term planning and strategic decisions
-- Status: Current (v1.0.0)
-- When to Read: For roadmap context and implementation prioritization
-
-#### 5. vessel_agent_vision_synthesis.md
-- Purpose: Creative vision narrative
-- Contains: What the system becomes in 5 years, philosophical foundations
-- Critical For: Motivation and understanding the "why"
-- Status: Current (v1.0.0)
-- When to Read: For inspiration and big-picture context
-
-### Supporting Documents
-
-#### 6. marine_visualization_design_doc.md
-- Purpose: Multi-panel interface design (CAD + DAW inspired)
-- Contains: Complete UI/UX specifications
-- Status: Complete (70+ pages)
-- Critical For: Frontend development
-
-#### 7. marine_vessel_agent_system_analysis.md
-- Purpose: Technical system analysis
-- Contains: Architecture patterns, data flow, component specifications
-- Status: Current
-- Critical For: Deep technical implementation
-
-#### 8. tzrawcapturesystem1.md (Reference)
-- Purpose: Original conversation with Gemini about raw capture
-- Contains: Foundational technical discussion
-- Status: Reference document
-- Critical For: Understanding capture system origins
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
-## System Status Summary
+## The Non-Renewable Resource Principle
 
-### Current Phase: Phase 0 - Data Capture Emergency
+> *"Acoustic signatures of 2026 cannot be recreated in 2031."*
 
-**Timeline:** July 2026 (Days 1-30)
-**Priority:** CRITICAL
-**Focus:** Level 0 - Raw Bits (network packets, NMEA bytes)
-
-**Completed:**
-- ✅ Vessel agent framework (tzpro-agent repo)
-- ✅ Basic capture system (capture_v3.py)
-- ✅ NMEA bridge (nmea_bridge.py)
-- ✅ Knowledge base structure (this directory)
-
-**In Progress:**
-- 🔄 Robust network packet capture
-- 🔄 NMEA interpolation engine
-- 🔄 Parquet storage pipeline
-- 🔄 Data quality monitoring
-
-**Pending:**
-- ⏳ Physical normalization (Level 1)
-- ⏳ Feature extraction (Level 2)
-- ⏳ Multi-panel interface
-- ⏳ Agent ecosystem
-
-### BMAD Level Status
-
-| Level | Name | Status | Progress |
-|-------|------|--------|----------|
-| 0 | Raw Bits | 🔄 In Progress | 60% |
-| 1 | Physical Tensors | ⏳ Planned | 0% |
-| 2 | Analytical Features | ⏳ Planned | 0% |
-| 3 | Operational Intelligence | ⏳ Planned | 0% |
-| 4 | Strategic Knowledge | ⏳ Planned | 0% |
+Every depth sounding is evidence. Once the vessel passes over water, that data is gone — unless it was captured. AELMA captures comprehensively and analyzes incrementally. Every data point has a temporal anchor (`timestamp_ns`), a spatial anchor (lat/lon/[H3](aelma/twin/h3_index.py)), and source provenance. Models will improve. Field data is irreplaceable.
 
 ---
 
-## Critical Principles
+## BMAD — Bottom-Up, Multi-Level, Agile Development
 
-### 1. Capture Now, Analyze Later
-- Data captured in 2026 cannot be recreated in 2031
-- Models will improve, but field data is non-renewable
-- Capture comprehensively, analyze incrementally
+The architecture is a stack. Each level builds on the one below. Each level must be stable before the next begins.
 
-### 2. Time/Location/Source Anchoring
-- Every data point has temporal anchor (timestamp_ns)
-- Every data point has spatial anchor (lat/lon/H3)
-- Every data point has source provenance (vessel/hardware)
+| Level | Name | What It Does | Status |
+|-------|------|-------------|--------|
+| 0 | **Raw Bits** | Network packets, NMEA bytes, zero-copy parsing | 🔄 In Progress |
+| 1 | **Physical Tensors** | Normalization, calibration, H3 spatial indexing | ⏳ Planned |
+| 2 | **Analytical Features** | Classification, pattern mining, species detection | ⏳ Planned |
+| 3 | **Operational Intelligence** | Catch prediction, route optimization, decision support | ⏳ Planned |
+| 4 | **Strategic Knowledge** | Stock assessment, ecosystem analysis, regulatory integration | ⏳ Planned |
 
-### 3. Bottom-Up Development (BMAD)
-- Build from raw bits upward through abstraction layers
-- Each level must be stable before building the next
-- Clear interfaces between levels
-
-### 4. Multi-Level Architecture
-- Maintain boundaries between abstraction levels
-- Well-defined contracts via interfaces
-- Parallel development at different levels
-
-### 5. Agile Iteration
-- 2-week sprints with deployable output
-- Continuous validation and course correction
-- Each sprint contributes to long-term vision
+You plane timber true before you mark the joinery. You read the swell an hour ahead before you trim the sail.
 
 ---
 
-## Data Flow Overview
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ VESSEL LAN (no internet required)                           │
+│                                                             │
+│  ┌──────────────┐   NMEA 0183    ┌──────────────┐          │
+│  │  simulator   │───────────────▶│    bridge    │          │
+│  │  (or real    │   TCP :8001    │  Parses +    │          │
+│  │   hardware)  │                │  quality-    │          │
+│  └──────────────┘                │  checks      │          │
+│                                  └──────┬───────┘          │
+│                                         │ TelemetryPackets  │
+│                                         ▼                   │
+│  ┌─────────────────────────────────────────────────┐       │
+│  │                   T w i n C o r e                │       │
+│  │  ┌───────────┐ ┌───────────┐ ┌───────────────┐ │       │
+│  │  │ Vessel    │ │ Bathymetry│ │ Watcher       │ │       │
+│  │  │ State     │ │ Grid      │ │ Registry      │ │       │
+│  │  └───────────┘ └───────────┘ └───────────────┘ │       │
+│  │  ┌───────────┐ ┌───────────┐ ┌───────────────┐ │       │
+│  │  │ Anomaly   │ │ JEPA      │ │ MOB           │ │       │
+│  │  │ Detector  │ │ World     │ │ Detector      │ │       │
+│  │  └───────────┘ └───────────┘ └───────────────┘ │       │
+│  │  ┌───────────┐ ┌───────────┐ ┌───────────────┐ │       │
+│  │  │ Crew      │ │ Route     │ │ Predictive    │ │       │
+│  │  │ Fatigue   │ │ Optimizer │ │ Maintenance   │ │       │
+│  │  └───────────┘ └───────────┘ └───────────────┘ │       │
+│  └────────────────────┬────────────────────────────┘       │
+│                       │ WebSocket :8090                     │
+│                       ▼                                     │
+│  ┌──────────────────────────────────────────────┐          │
+│  │              V i e w e r (browser)            │          │
+│  │       WebGL + D3 + MapLibre rendering         │          │
+│  └──────────────────────────────────────────────┘          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Design Principles
+
+1. **[Air-gap first](aelma/docs/ARCHITECTURE.md#design-principles)** — every component runs on the vessel LAN. No cloud auth, no phone-home. A Raspberry Pi 5 + a tablet is a complete deployment.
+2. **Standard library Python** — no pydantic, no Django, no Kafka. asyncio + websockets + stdlib. A captain with a Python tutorial can read every line.
+3. **[Schemas are contracts](aelma/schema/)** — every wire format is a JSON Schema. Components are independently replaceable as long as they honor the schema.
+4. **Simulator substitutes for hardware** — develop and test without a single physical sensor. Plug in real NMEA 0183 later by changing one CLI flag.
+5. **Progressive world refinement** — the bathymetry layer starts empty and gets denser every time the vessel crosses water.
+
+---
+
+## Core Components
+
+### Data Ingestion
+
+| Component | File | Description |
+|-----------|------|-------------|
+| **[NMEA Bridge](aelma/bridge/bridge.py)** | [`bridge/`](aelma/bridge/) | Parses NMEA 0183 sentences from TCP or serial. Quality-checks each sentence. Produces TelemetryPackets. |
+| **[Signal K Bridge](aelma/bridge/signalk.py)** | [`bridge/signalk.py`](aelma/bridge/signalk.py) | Parses Signal K deltas for modern marine instruments. |
+| **[UDP Sensor Capture](aelma/twin/sensors/nmea_udp_capture.py)** | [`sensors/`](aelma/twin/sensors/) | Zero-copy UDP packet capture for raw NMEA streams. |
+| **[Sonar Integration](aelma/twin/sonar.py)** | [`sonar.py`](aelma/twin/sonar.py) | Fish target tracking via NMEA. Parses Humminbird, Lowrance, Garmin. Bottom classification. Biomass proxy. |
+
+### Twin Core
+
+| Component | File | Description |
+|-----------|------|-------------|
+| **[TwinCore](aelma/twin/core.py)** | [`core.py`](aelma/twin/core.py) | The async runtime. Composes all subsystems. Ingests telemetry, broadcasts snapshots, persists bathymetry. |
+| **[Vessel State](aelma/twin/state.py)** | [`state.py`](aelma/twin/state.py) | Live vessel pose: lat, lon, heading, speed. Dead-reckons between fixes using great-circle bearing. |
+| **[Bathymetry Grid](aelma/twin/bathymetry.py)** | [`bathymetry.py`](aelma/twin/bathymetry.py) | Progressive seafloor mapping. Every sounding fuses into the grid. Denser with every pass. |
+| **[H3 Indexing](aelma/twin/h3_index.py)** | [`h3_index.py`](aelma/twin/h3_index.py) | Uber H3 hexagonal spatial indexing. Every data point anchored to a cell. |
+
+### Intelligence
+
+| Component | File | Description |
+|-----------|------|-------------|
+| **[Watcher Registry](aelma/twin/watchers.py)** | [`watchers.py`](aelma/twin/watchers.py) | Deterministic threshold rules. Pure predicates. The fast path — no model reasoning, just rules. |
+| **[Anomaly Detector](aelma/twin/anomaly_detector.py)** | [`anomaly_detector.py`](aelma/twin/anomaly_detector.py) | z-score + IQR fences + moving-average deviation. Three algorithms, one verdict. |
+| **[JEPA World Model](aelma/twin/jepa_model.py)** | [`jepa_model.py`](aelma/twin/jepa_model.py) | Joint Embedding Predictive Architecture. Predicts next 60 seconds of telemetry. Anomaly via prediction error. |
+| **[Predictive Maintenance](aelma/twin/predictive_maintenance.py)** | [`predictive_maintenance.py`](aelma/twin/predictive_maintenance.py) | Linear trend extrapolation + threshold breach prediction + MTBF. Equipment failure forecasting. |
+| **[Route Optimizer](aelma/twin/route_optimizer.py)** | [`route_optimizer.py`](aelma/twin/route_optimizer.py) | Nearest-neighbor TSP approximation. Great-circle distances. Fuel cost model. GPX export. |
+| **[LLM Narrator](aelma/twin/llm_narrator.py)** | [`llm_narrator.py`](aelma/twin/llm_narrator.py) | Explains watcher actions in plain language. Ollama or OpenAI backend. Never invents sensor values. |
+
+### Safety Systems
+
+| Component | File | Description |
+|-----------|------|-------------|
+| **[MOB Detector](aelma/twin/mob_detector.py)** | [`mob_detector.py`](aelma/twin/mob_detector.py) | Man Over Board. Manual, beacon, fall, lifeline, camera detection. IAMSAR search patterns. Drift modeling. **Life-critical.** |
+| **[Crew Fatigue Monitor](aelma/twin/fatigue_monitor.py)** | [`fatigue_monitor.py`](aelma/twin/fatigue_monitor.py) | STCW/USCG/IMO compliance. Work-hour tracking. Watch scheduling. Fatigue scoring. |
+| **[Circuit Breaker](aelma/twin/circuit_breaker.py)** | [`circuit_breaker.py`](aelma/twin/circuit_breaker.py) | Protects external systems from cascade failures. Trips on repeated errors. Auto-recovery. |
+
+### Operations
+
+| Component | File | Description |
+|-----------|------|-------------|
+| **[Catch Log](aelma/twin/catch_log.py)** | [`catch_log.py`](aelma/twin/catch_log.py) | Species, weight, location, gear. E-logbook format. |
+| **[Gear Tracker](aelma/twin/gear_tracker.py)** | [`gear_tracker.py`](aelma/twin/gear_tracker.py) | Longline and pot positions. Soak time. Catch-per-unit-effort. |
+| **[Quota Manager](aelma/twin/quota_manager.py)** | [`quota_manager.py`](aelma/twin/quota_manager.py) | Species quotas. Season limits. Real-time remaining. |
+| **[Trip Summary](aelma/twin/trip_summary.py)** | [`trip_summary.py`](aelma/twin/trip_summary.py) | End-of-trip reports. CPUE, fuel, catch breakdown. |
+| **[Report Generator](aelma/twin/report_generator.py)** | [`report_generator.py`](aelma/twin/report_generator.py) | Automated regulatory and operational reports. |
+| **[Fleet Manager](aelma/twin/fleet_manager.py)** | [`fleet_manager.py`](aelma/twin/fleet_manager.py) | Multi-vessel coordination. Fleet-wide analytics. Inter-vessel messaging. |
+
+### Infrastructure
+
+| Component | File | Description |
+|-----------|------|-------------|
+| **[OpLog](aelma/twin/oplog.py)** | [`oplog.py`](aelma/twin/oplog.py) | Operational log. Structured event recording. |
+| **[A2A Log](aelma/twin/a2a_log.py)** | [`a2a_log.py`](aelma/twin/a2a_log.py) | Agent-to-Agent action history. Append-only audit trail. |
+| **[Health Checker](aelma/twin/health.py)** | [`health.py`](aelma/twin/health.py) | System health monitoring. Readiness checks. |
+| **[Metrics](aelma/twin/metrics.py)** | [`metrics.py`](aelma/twin/metrics.py) | Prometheus-compatible metrics. Performance tracking. |
+| **[Notifications](aelma/twin/notifications.py)** | [`notifications.py`](aelma/twin/notifications.py) | Multi-channel alerting. Priority routing. |
+| **[Equipment Monitor](aelma/twin/equipment_monitor.py)** | [`equipment_monitor.py`](aelma/twin/equipment_monitor.py) | Engine, generator, refrigeration tracking. |
+| **[Environmental Stewardship](aelma/twin/environmental/stewardship.py)** | [`stewardship.py`](aelma/twin/environmental/stewardship.py) | Fuel efficiency, carbon footprint, bycatch mitigation, sustainability scoring. |
+| **[Plugins](aelma/twin/plugins.py)** | [`plugins.py`](aelma/twin/plugins.py) | Plugin system for extending AELMA without modifying core. |
+
+---
+
+## Data Flow
 
 ```
 PHYSICAL LAYER
@@ -160,246 +165,158 @@ PHYSICAL LAYER
 CAPTURE LAYER (Level 0)
   BPF Filter → Ring Buffer → Zero-Copy Parser
         ↓
-STORAGE LAYER (Level 0-1)
+STORAGE LAYER
   Parquet Writer → Hive Partitioning → Disk
         ↓
-PROCESSING LAYER (Level 1)
-  Physical Normalization → H3 Indexing → Metadata
+BRIDGE LAYER
+  NMEA Parser → Quality Check → TelemetryPacket
         ↓
-ANALYSIS LAYER (Level 2)
-  Feature Extraction → Classification → Pattern Mining
+TWIN CORE
+  VesselState + BathymetryGrid + WatcherRegistry
         ↓
-INTELLIGENCE LAYER (Level 3)
-  Prediction → Recommendation → Decision Support
+INTELLIGENCE LAYER
+  AnomalyDetector + JEPA + RouteOptimizer + LLM Narrator
         ↓
-STRATEGY LAYER (Level 4)
-  Stock Assessment → Ecosystem Analysis → Scenario Planning
+VIEWER LAYER
+  WebSocket broadcast → Browser → WebGL/D3/MapLibre
 ```
 
 ---
 
-## Quick Reference Commands
+## Graceful Degradation Hierarchy
 
-### System Operations
+The system never crashes to desktop. It degrades to lower fidelity layers:
+
+1. **NMEA Bridge** — hardware truth (highest fidelity)
+2. **TwinCore Dead Reckoning** — physics model (GPS drops, keep going)
+3. **JEPA Latent Prediction** — learned dynamics (predict next 60s)
+4. **Simulator Fallback** — training/drill mode (lowest fidelity)
+
+---
+
+## Quick Start
+
 ```bash
-# Start capture daemon
-python capture_daemon.py run
+# Clone
+git clone https://github.com/SuperInstance/vessel-agent-system.git
+cd vessel-agent-system/aelma
 
-# Check system status
-python capture_daemon.py status
+# Run the simulator + bridge + twin + viewer (full stack, no hardware)
+python -m twin
 
-# Validate data quality
-python capture_daemon.py doctor
-
-# Single capture
-python capture_daemon.py once
-
-# Stop capture
-python capture_daemon.py stop
+# Or run individual components
+python -m bridge          # NMEA bridge
+python -m simulator       # Simulated vessel
+python -m twin            # Twin core
 ```
 
-### Data Queries
-```sql
--- Query acoustic data for H3 cell
-SELECT timestamp_ns, backscatter_db, latitude, longitude
-FROM read_parquet('archive_root/year=*/month=*/*.parquet')
-WHERE h3_index_uint64 = 0x8a21104523fffff
-  AND timestamp_ns BETWEEN ? AND ?
-ORDER BY timestamp_ns;
+The viewer opens at `http://localhost:8090` on the vessel LAN.
 
--- Correlate catch with acoustic signatures
-SELECT c.species, AVG(a.backscatter_db) as avg_sv
-FROM catch_events c
-JOIN acoustic_data a ON a.h3_index_uint64 IN c.h3_cells
-GROUP BY c.species;
+### Running Tests
+
+```bash
+cd vessel-agent-system/aelma
+python -m pytest tests/ -v
 ```
+
+56 test files covering: bridge parsing, quality checks, telemetry packets, bathymetry fusion, vessel state, H3 indexing, anomaly detection, watchers, MOB detection, crew fatigue, route optimization, JEPA predictions, LLM narration, fleet management, equipment monitoring, predictive maintenance, catch logging, gear tracking, quota management, and integration tests.
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [AELMA Architecture](aelma/docs/ARCHITECTURE.md) | Full architecture document — design principles, component topology, data flow, deployment |
+| [A2A System](aelma/docs/a2a_system.md) | Agent-to-Agent action logging and query system |
+| [Crew Fatigue Monitor](aelma/docs/crew_fatigue.md) | STCW compliance, watch scheduling, fatigue scoring |
+| [Memory Schema](vessel_agent_memory_schema.json) | JSON schema for agent memory |
+| [Knowledge Base](vessel_agent_knowledge_base.md) | Comprehensive technical knowledge base |
+| [5-Year Vision](vessel_agent_5year_vision.md) | Strategic roadmap with BMAD methodology |
+| [Vision Synthesis](vessel_agent_vision_synthesis.md) | Creative vision narrative |
+| [Marine Visualization Design](marine_visualization_design_doc.md) | Multi-panel interface design (70+ pages, CAD + DAW inspired) |
+| [System Analysis](marine_vessel_agent_system_analysis.md) | Architecture patterns, data flow, component specifications |
+| [Shared Briefs](aelma/schema/shared_brief.md) | Component design briefs |
+| [Twin README](aelma/build_claude/twin/README.md) | Digital twin component docs |
+| [Viewer README](aelma/build_claude/viewer/README.md) | Viewer component docs |
 
 ---
 
 ## Key Technologies
 
-### Data Capture
-- **Python** + pypcap + memoryview (zero-copy packet processing)
-- **BPF filters** (kernel-level network interception)
-- **Ring buffers** (lossless ingestion)
-
-### Data Storage
-- **Apache Arrow** (columnar in-memory format)
-- **Parquet** (compressed columnar storage)
-- **Hive partitioning** (year/month/day/vessel_id)
-- **DuckDB** (local SQL query engine)
-
-### Spatial Processing
-- **Uber H3** (hexagonal spatial indexing)
-- **ICES SONAR-netCDF4** (water column data standard)
-- **Sub-second interpolation** (GPS/sounder fusion)
-
-### Visualization
-- **React** + TypeScript (UI framework)
-- **WebGL** (GPU-accelerated rendering)
-- **D3.js** (timeline visualization)
-- **MapLibre GL** (map rendering)
-
-### Agents
-- **PyTorch** (ML models)
-- **ZeroMQ** (real-time messaging)
-- **OpenCV** (image processing)
-- **Whisper** (voice transcription)
+| Category | Technology | Why |
+|----------|-----------|-----|
+| **Runtime** | Python asyncio | Single-threaded, deterministic. No race conditions on vessel truth. |
+| **Messaging** | WebSockets | Real-time bidirectional. Browser-native. |
+| **Storage** | Apache Parquet | Columnar, compressed, future-proof. Queryable with DuckDB. |
+| **Spatial** | Uber H3 | Hexagonal hierarchical indexing. Resolution-independent. |
+| **Marine** | NMEA 0183 | The lingua franca of marine instruments. |
+| **Marine** | Signal K | Modern open marine data format. |
+| **Visualization** | WebGL + D3 + MapLibre | GPU-accelerated rendering, timelines, maps. |
+| **ML** | Pure Python (no torch) | Fast inference, no GPU dependency, readable. |
 
 ---
 
-## Success Metrics
+## In the Fleet
 
-### Level 0 (Raw Bits)
-- Capture rate: >99.9%
-- Packet loss: <0.1%
-- Query performance: <1s for any day
-- Uptime: >99% during operations
+AELMA is the vessel intelligence OS of the [SuperInstance](https://github.com/SuperInstance) fleet. It connects to:
 
-### Level 1 (Physical Tensors)
-- Position error: <5m at 10 knots
-- Depth precision: <0.5m
-- Sv calibration: <1dB variance
-- H3 coverage: 100%
+- [**vessel-room-navigator**](https://github.com/SuperInstance/vessel-room-navigator) — The boat as a 3D web space. Room navigation through vessel compartments. AELMA provides the live data; the navigator provides the spatial interface.
+- [**hermes-perception**](https://github.com/SuperInstance/hermes-perception) — The boat perceives. Sensory systems that drag through data like a towfish through water. AELMA's sensors feed perception; perception feeds AELMA's intelligence.
+- [**cns-bridge**](https://github.com/SuperInstance/cns-bridge) — The boat has a nervous system. CNS bus events carry telemetry, watcher actions, and anomaly alerts across the fleet.
+- [**vibe-protocol**](https://github.com/SuperInstance/vibe-protocol) — Vibes become signals. The vessel's operational state generates vibes that propagate through the protocol.
+- [**roblox-filtergate**](https://github.com/SuperInstance/roblox-filtergate) — Vessel communications routed through FilterGate for kid-safe output when used in educational contexts.
+- [**roblox-bond-system**](https://github.com/SuperInstance/roblox-bond-system) — Crew trust modeled through bond tiers. The captain-agent relationship mirrors BondSystem's progression.
+- [**fleet-envelope**](https://github.com/SuperInstance/fleet-envelope) — Event grammar for fleet-wide vessel coordination.
+- [**cocapn-dashboard**](https://github.com/SuperInstance/cocapn-dashboard) — Bioluminescent fleet dashboard. Visualizes AELMA telemetry across the fleet.
+- [**mud-engine**](https://github.com/SuperInstance/mud-engine) — The room engine where vessel spaces exist as navigable rooms.
+- [**AI-Writings**](https://github.com/SuperInstance/AI-Writings/tree/main/prose) — The vessel's story told in overnight creative sessions.
 
-### Level 2 (Analytical Features)
-- Species accuracy: >70% for 3 species
-- Biomass precision: >80%
-- Bottom classification: >85%
-- Thermocline detection: <2m
+### The Boat
+The boat is real. F/V EILEEN is a 51' commercial fishing vessel home-ported in Southeast Alaska. Every line of code in this system exists to serve the captain and crew on the water. The [5-year vision](vessel_agent_5year_vision.md) maps the journey from raw data capture to strategic fisheries knowledge.
 
-### Level 3 (Operational Intelligence)
-- Catch prediction: >60% at 24h
-- CPUE improvement: >15%
-- Fleet adoption: 5+ vessels
-- Alert latency: <1 minute
+### The Towfish
+AELMA is also a towfish — dragging sensors through the data stream, capturing what lies beneath. The [progressive bathymetry grid](aelma/twin/bathymetry.py) is the towfish's record: every pass makes the picture denser. The [anomaly detector](aelma/twin/anomaly_detector.py) is the towfish finding what shouldn't be there. The [JEPA world model](aelma/twin/jepa_model.py) is the towfish predicting what's coming next.
 
-### Level 4 (Strategic Knowledge)
-- Biomass estimate: within 20% of surveys
-- Publications: 3+ peer-reviewed
-- Regulatory acceptance: ADF&G integration
-- Open tools: 50+ vessel adoption
+### The CNS Bus
+AELMA's [watcher registry](aelma/twin/watchers.py) fires actions that propagate through the [CNS bridge](https://github.com/SuperInstance/cns-bridge) as nervous system events. Shallow water warning → CNS event → fleet awareness. MOB detection → CNS event → all hands alert. The vessel doesn't just perceive — it communicates what it perceives.
 
 ---
 
-## File Structure
+## Design Philosophy
 
-```
-claudetz/
-├── README.md                           # This file (entry point)
-├── vessel_agent_memory_schema.json     # Agent memory structure
-├── vessel_agent_knowledge_base.md      # Technical knowledge base
-├── vessel_agent_5year_vision.md        # 5-year roadmap (BMAD)
-├── vessel_agent_vision_synthesis.md    # Creative vision narrative
-├── marine_visualization_design_doc.md   # Multi-panel interface design
-├── marine_vessel_agent_system_analysis.md  # Technical analysis
-└── tzrawcapturesystem1.md              # Original capture conversation
-```
+### Capture Now, Analyze Later
+Data captured in 2026 cannot be recreated in 2031. Models improve. Field data doesn't. Capture comprehensively. Analyze incrementally.
+
+### Foundation First
+Level 0 must be bulletproof before Level 1 begins. Raw bits first. Physical tensors second. Analytical features third. Intelligence fourth. Strategy fifth.
+
+### Continuous Value
+Every 2-week sprint produces deployable value. Sprint 1-2: working packet capture. Sprint 3-4: GPS/sounder fusion. Sprint 5-6: Parquet storage pipeline. Each sprint delivers something useful, even if incomplete.
 
 ---
 
-## Agent Continuity Protocol
+## Vessel Specs
 
-### When Starting a New Session
-
-1. **Load Core Context** (1 hour)
-   - Read README.md (this file)
-   - Parse memory schema JSON
-   - Review knowledge base
-   - Check 5-year vision
-
-2. **Check Implementation Status** (15 minutes)
-   - Review current phase in schema
-   - Check completed tasks
-   - Identify pending work
-
-3. **Continue from Last State** (ongoing)
-   - Use schemas as immutable reference
-   - Update roadmap status as tasks complete
-   - Add new learnings to knowledge base
-
-4. **Maintain BMAD Principles** (always)
-   - Bottom-up development
-   - Multi-level architecture
-   - Agile iteration
-   - Long-term vision
-
-### When Making Architectural Decisions
-
-1. **Check Schema First** - Is there already a defined structure?
-2. **Review BMAD Level** - Which abstraction level does this affect?
-3. **Consider Impact** - How does this affect other levels?
-4. **Update Documentation** - Add decision rationale to knowledge base
-5. **Validate Against Vision** - Does this align with 5-year goals?
-
-### When Approaching Context Limits
-
-1. **Core schemas are immutable** - Don't modify, only extend
-2. **Architecture is stable** - Major changes require vision review
-3. **Roadmap is updated** - Status changes are routine
-4. **Agent context is ephemeral** - Regenerate from schemas next session
+| Spec | Value |
+|------|-------|
+| **Vessel** | F/V EILEEN |
+| **Length** | 51' |
+| **Type** | Commercial Fishing |
+| **Home Port** | Southeast Alaska |
+| **Primary Fishery** | Power Trolling |
+| **Development Start** | July 2026 |
+| **Horizon** | 2031 (5-year vision) |
 
 ---
 
-## Development Philosophy
+## Where to Next
 
-### The Non-Renewable Resource Principle
-
-**"Acoustic signatures of 2026 cannot be recreated in 2031."**
-
-This principle drives every technical decision:
-
-- **Capture everything now** - We'll figure out how to use it later
-- **Store in future-proof formats** - Parquet, ICES-aligned, hardware-agnostic
-- **Never overwrite** - Version increment, append, extend
-- **Query-ready** - Data must be instantly accessible for unknown future queries
-
-### The Foundation First Principle
-
-**"Level 0 must be bulletproof before Level 1 begins."**
-
-BMAD bottom-up development means:
-
-- **Raw bits first** - Packet capture, parsing, storage
-- **Physical tensors second** - Normalization, calibration, indexing
-- **Analytical features third** - Classification, pattern mining
-- **Intelligence fourth** - Prediction, recommendation
-- **Strategy fifth** - Stock assessment, ecosystem understanding
-
-### The Continuous Value Principle
-
-**"Every 2-week sprint must produce deployable value."**
-
-Agile iteration means:
-
-- **Sprint 1-2**: Working packet capture
-- **Sprint 3-4**: GPS/sounder fusion
-- **Sprint 5-6**: Parquet storage pipeline
-- **Sprint 7-8**: Data quality monitoring
-
-Each sprint delivers something useful, even if incomplete.
-
----
-
-## Contact & Context
-
-**Vessel:** F/V EILEEN
-**Captain:** Casey
-**Location:** Southeast Alaska
-**Methodology:** BMAD
-**Horizon:** 2031
-
-**System Status:** Phase 0 (Data Capture Emergency)
-**Next Milestone:** Complete Level 0 implementation (30 days)
-**Current Focus:** Network packet capture, NMEA interpolation, Parquet storage
-
----
-
-**This README is maintained as the single entry point for all agent sessions working on the vessel agent system. Update this file when architectural milestones are reached, but keep the core structure stable for continuity.**
-
----
-
-*Version: 1.0.0*
-*Last Updated: 2026-07-24*
-*Next Review: After Phase 0 completion*
-*Status: Foundation Complete → Implementation In Progress*
+- [**vessel-room-navigator**](https://github.com/SuperInstance/vessel-room-navigator) — Walk through the boat as a 3D space
+- [**hermes-perception**](https://github.com/SuperInstance/hermes-perception) — The sensory systems that feed AELMA
+- [**cns-bridge**](https://github.com/SuperInstance/cns-bridge) — The nervous system that carries AELMA's signals
+- [**vibe-protocol**](https://github.com/SuperInstance/vibe-protocol) — How the vessel's state becomes vibes
+- [**cocapn-dashboard**](https://github.com/SuperInstance/cocapn-dashboard) — See the fleet on the bioluminescent dashboard
+- [**fleet-envelope**](https://github.com/SuperInstance/fleet-envelope) — The event grammar for fleet coordination
+- [**mud-engine**](https://github.com/SuperInstance/mud-engine) — The rooms where the vessel exists as data
+- [**AI-Writings**](https://github.com/SuperInstance/AI-Writings/tree/main/prose) — The boat's story, told overnight
