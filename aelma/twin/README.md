@@ -87,7 +87,7 @@ The heart of AELMA. All intelligence modules live here. The twin ingests telemet
 ## Fleet Connections
 
 - [vessel-room-navigator](https://github.com/SuperInstance/vessel-room-navigator) — The boat as navigable 3D space
-- [hermes-perception](https://github.com/SuperInstance/hermes-perception) — The towfish feeding AELMA sensor data
+- [hermes-avatar](https://github.com/SuperInstance/hermes-avatar) — The towfish feeding AELMA sensor data
 - [cns-bridge](https://github.com/SuperInstance/cns-bridge) — Watcher events → CNS bus → fleet awareness
 - [vibe-protocol](https://github.com/SuperInstance/vibe-protocol) — Vessel state → vibes → signals
 - [roblox-beatclock](https://github.com/SuperInstance/roblox-beatclock) — Timing grid for sync operations

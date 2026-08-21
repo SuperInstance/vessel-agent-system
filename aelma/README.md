@@ -41,15 +41,15 @@ The production system for F/V EILEEN. Phase 2 complete: 407 tests passing.
 ## Fleet Connections
 
 - [vessel-room-navigator](https://github.com/SuperInstance/vessel-room-navigator) — Walk through the boat as a 3D web space
-- [hermes-perception](https://github.com/SuperInstance/hermes-perception) — The towfish: sensory systems that feed AELMA
+- [hermes-avatar](https://github.com/SuperInstance/hermes-avatar) — The towfish: sensory systems that feed AELMA
 - [cns-bridge](https://github.com/SuperInstance/cns-bridge) — The nervous system carrying AELMA's watcher events
 - [vibe-protocol](https://github.com/SuperInstance/vibe-protocol) — Vessel state becomes vibes
 - [cocapn-dashboard](https://github.com/SuperInstance/cocapn-dashboard) — Bioluminescent fleet dashboard visualizing AELMA telemetry
 - [fleet-envelope](https://github.com/SuperInstance/fleet-envelope) — Event grammar for fleet-wide vessel coordination
 - [roblox-bond-system](https://github.com/SuperInstance/roblox-bond-system) — Crew trust modeled through bond tiers
 - [roblox-filtergate](https://github.com/SuperInstance/roblox-filtergate) — Vessel comms filtered for kid-safe contexts
-- [the-living-minds](https://github.com/SuperInstance/the-living-minds) — 5 local models powering the LLM narrator
-- [fleet-wiki](https://github.com/SuperInstance/fleet-wiki) — 700+ pages of fleet knowledge
+- [the-living-minds](https://github.com/SuperInstance/the-living-minds) (dead) — 5 local models powering the LLM narrator
+- [lucineer-fleet-wiki](https://github.com/SuperInstance/lucineer-fleet-wiki) — 700+ pages of fleet knowledge
 - [AI-Writings](https://github.com/SuperInstance/AI-Writings/tree/main/prose) — The boat's story in overnight creative sessions
 - [mud-engine](https://github.com/SuperInstance/mud-engine) — The room engine where vessel spaces exist
 

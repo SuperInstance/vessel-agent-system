@@ -272,7 +272,7 @@ python -m pytest tests/ -v
 AELMA is the vessel intelligence OS of the [SuperInstance](https://github.com/SuperInstance) fleet. It connects to:
 
 - [**vessel-room-navigator**](https://github.com/SuperInstance/vessel-room-navigator) — The boat as a 3D web space. Room navigation through vessel compartments. AELMA provides the live data; the navigator provides the spatial interface.
-- [**hermes-perception**](https://github.com/SuperInstance/hermes-perception) — The boat perceives. Sensory systems that drag through data like a towfish through water. AELMA's sensors feed perception; perception feeds AELMA's intelligence.
+- [**hermes-avatar**](https://github.com/SuperInstance/hermes-avatar) — The boat perceives. Sensory systems that drag through data like a towfish through water. AELMA's sensors feed perception; perception feeds AELMA's intelligence.
 - [**cns-bridge**](https://github.com/SuperInstance/cns-bridge) — The boat has a nervous system. CNS bus events carry telemetry, watcher actions, and anomaly alerts across the fleet.
 - [**vibe-protocol**](https://github.com/SuperInstance/vibe-protocol) — Vibes become signals. The vessel's operational state generates vibes that propagate through the protocol.
 - [**roblox-filtergate**](https://github.com/SuperInstance/roblox-filtergate) — Vessel communications routed through FilterGate for kid-safe output when used in educational contexts.
@@ -323,7 +323,7 @@ Every 2-week sprint produces deployable value. Sprint 1-2: working packet captur
 ## Where to Next
 
 - [**vessel-room-navigator**](https://github.com/SuperInstance/vessel-room-navigator) — Walk through the boat as a 3D space
-- [**hermes-perception**](https://github.com/SuperInstance/hermes-perception) — The sensory systems that feed AELMA
+- [**hermes-avatar**](https://github.com/SuperInstance/hermes-avatar) — The sensory systems that feed AELMA
 - [**cns-bridge**](https://github.com/SuperInstance/cns-bridge) — The nervous system that carries AELMA's signals
 - [**vibe-protocol**](https://github.com/SuperInstance/vibe-protocol) — How the vessel's state becomes vibes
 - [**cocapn-dashboard**](https://github.com/SuperInstance/cocapn-dashboard) — See the fleet on the bioluminescent dashboard
@@ -332,8 +332,8 @@ Every 2-week sprint produces deployable value. Sprint 1-2: working packet captur
 - [**AI-Writings**](https://github.com/SuperInstance/AI-Writings/tree/main/prose) — The boat's story, told overnight
 - [**roblox-bond-system**](https://github.com/SuperInstance/roblox-bond-system) — Crew trust modeled through bond tiers
 - [**roblox-filtergate**](https://github.com/SuperInstance/roblox-filtergate) — Vessel communications filtered for kid-safe contexts
-- [**the-living-minds**](https://github.com/SuperInstance/the-living-minds) — 5 local models always on, powering the LLM narrator
-- [**fleet-wiki**](https://github.com/SuperInstance/fleet-wiki) — D1-backed knowledge base, 700+ pages of fleet memory
+- [**the-living-minds**](https://github.com/SuperInstance/the-living-minds) (dead) — 5 local models always on, powering the LLM narrator
+- [**lucineer-fleet-wiki**](https://github.com/SuperInstance/lucineer-fleet-wiki) — D1-backed knowledge base, 700+ pages of fleet memory
 
 ---
 
