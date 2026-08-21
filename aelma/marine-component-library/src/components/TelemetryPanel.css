@@ -1,0 +1,231 @@
+/**
+ * TelemetryPanel styles
+ * Marine-optimized with touch targets and contrast
+ */
+
+.telemetry-panel {
+  --panel-bg: var(--marine-surface);
+  --panel-border: var(--marine-border);
+  --text-primary: var(--marine-text);
+  --text-secondary: var(--marine-text-secondary);
+  --depth-text: var(--marine-text);
+  --depth-bg-good: #35e08a;
+  --depth-bg-fair: #e0b13c;
+  --depth-bg-bad: #e04b4b;
+  --field-hover: var(--marine-surface-variant);
+
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--marine-border-lg);
+  padding: var(--marine-spacing-md);
+  font-family: var(--marine-font-family);
+  color: var(--text-primary);
+}
+
+.telemetry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--marine-spacing-md);
+  padding-bottom: var(--marine-spacing-sm);
+  border-bottom: 1px solid var(--marine-divider);
+}
+
+.vessel-id {
+  font-size: var(--marine-font-lg);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: var(--marine-spacing-xs);
+  font-size: var(--marine-font-sm);
+  color: var(--text-secondary);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse-dot 2s infinite;
+}
+
+.status-dot.connected {
+  background: var(--marine-success);
+}
+
+.status-dot.disconnected {
+  background: var(--marine-error);
+  animation: none;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Depth Panel - Large Display */
+.depth-panel {
+  background: var(--marine-surface-variant);
+  border-radius: var(--marine-border-md);
+  padding: var(--marine-spacing-lg);
+  margin-bottom: var(--marine-spacing-md);
+  text-align: center;
+}
+
+.depth-panel .label {
+  font-size: var(--marine-font-sm);
+  font-weight: 500;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  margin-bottom: var(--marine-spacing-xs);
+}
+
+.depth-big {
+  font-size: var(--marine-font-xxl);
+  font-weight: 700;
+  font-family: var(--marine-font-family-mono);
+  line-height: 1;
+  padding: var(--marine-spacing-sm) var(--marine-spacing-md);
+  border-radius: var(--marine-border-sm);
+  transition: all var(--marine-animation-fast);
+}
+
+.depth-big.q-none {
+  color: var(--text-secondary);
+}
+
+.depth-big.q-good {
+  color: var(--depth-bg-good);
+}
+
+.depth-big.q-fair {
+  color: var(--depth-bg-fair);
+}
+
+.depth-big.q-bad {
+  color: var(--depth-bg-bad);
+  animation: pulse-bad 1s infinite;
+}
+
+@keyframes pulse-bad {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.depth-quality {
+  font-size: var(--marine-font-xs);
+  color: var(--text-secondary);
+  margin-top: var(--marine-spacing-xs);
+}
+
+/* Telemetry Grid */
+.telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--marine-spacing-sm);
+}
+
+.telemetry-field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--marine-spacing-sm);
+  border-radius: var(--marine-border-md);
+  cursor: pointer;
+  transition: all var(--marine-animation-fast);
+  background: var(--marine-surface);
+  border: 1px solid var(--marine-border);
+}
+
+.telemetry-field:hover {
+  background: var(--field-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--marine-shadow-md);
+}
+
+.telemetry-field:active {
+  transform: translateY(0);
+}
+
+.field-name {
+  font-size: var(--marine-font-xs);
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: var(--marine-xxxs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.field-value {
+  font-size: var(--marine-font-lg);
+  font-weight: 600;
+  font-family: var(--marine-font-family-mono);
+  color: var(--text-primary);
+}
+
+.field-unit {
+  font-size: var(--marine-font-sm);
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: var(--marine-spacing-xl);
+  color: var(--text-secondary);
+  font-size: var(--marine-font-sm);
+}
+
+/* Compact Mode */
+.telemetry-panel.compact .telemetry-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.telemetry-panel.compact .depth-big {
+  font-size: var(--marine-font-xl);
+}
+
+/* Touch-Optimized Adjustments */
+@media (pointer: coarse) {
+  .telemetry-field {
+    min-height: var(--marine-touch-target-comfortable);
+    padding: var(--marine-spacing-md);
+  }
+
+  .field-value {
+    font-size: var(--marine-font-xl);
+  }
+}
+
+/* Night Mode Adjustments */
+.telemetry-panel[data-theme="night"] {
+  --depth-bg-good: #cc6633;
+  --depth-bg-fair: #cc9933;
+  --depth-bg-bad: #ff3333;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 768px) {
+  .telemetry-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .telemetry-panel {
+    padding: var(--marine-spacing-sm);
+  }
+
+  .telemetry-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .depth-big {
+    font-size: var(--marine-font-xl);
+  }
+}

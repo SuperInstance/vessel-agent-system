@@ -1,0 +1,206 @@
+/**
+ * BathymetryViewer styles
+ * Interactive depth map visualization
+ */
+
+.bathymetry-viewer {
+  --panel-bg: var(--marine-surface);
+  --panel-border: var(--marine-border);
+  --text-primary: var(--marine-text);
+  --text-secondary: var(--marine-text-secondary);
+  --highlight: var(--marine-accent);
+
+  position: relative;
+  width: 100%;
+  height: 400px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--marine-border-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Controls Toolbar */
+.bathy-controls {
+  display: flex;
+  gap: var(--marine-spacing-xs);
+  padding: var(--marine-spacing-sm);
+  background: var(--marine-surface-variant);
+  border-bottom: 1px solid var(--marine-divider);
+  flex-wrap: wrap;
+}
+
+.bathy-controls button {
+  padding: var(--marine-spacing-xs) var(--marine-spacing-sm);
+  border: 1px solid var(--marine-border);
+  border-radius: var(--marine-border-sm);
+  background: var(--marine-surface);
+  color: var(--text-primary);
+  font-size: var(--marine-font-sm);
+  cursor: pointer;
+  transition: all var(--marine-animation-fast);
+}
+
+.bathy-controls button:hover {
+  background: var(--marine-surface-variant);
+  border-color: var(--highlight);
+}
+
+.bathy-controls button:active {
+  transform: scale(0.95);
+}
+
+/* Canvas */
+.bathy-canvas {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* Color Scale */
+.color-scale {
+  position: absolute;
+  right: var(--marine-spacing-md);
+  bottom: var(--marine-spacing-md);
+  width: 8px;
+  height: 100px;
+  background: var(--marine-surface);
+  border: 1px solid var(--marine-border);
+  border-radius: var(--marine-border-sm);
+  overflow: hidden;
+  z-index: 10;
+}
+
+.scale-gradient {
+  width: 100%;
+  height: 100%;
+}
+
+.scale-labels {
+  position: absolute;
+  right: 12px;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: var(--marine-font-xs);
+  color: var(--text-secondary);
+  font-family: var(--marine-font-family-mono);
+}
+
+/* Tooltip */
+.bathy-tooltip {
+  position: absolute;
+  background: var(--marine-surface);
+  border: 1px solid var(--marine-border);
+  border-radius: var(--marine-border-md);
+  padding: var(--marine-spacing-sm);
+  box-shadow: var(--marine-shadow-lg);
+  z-index: 20;
+  pointer-events: none;
+  min-width: 200px;
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--marine-spacing-md);
+  margin-bottom: var(--marine-xxxs);
+}
+
+.tooltip-row:last-child {
+  margin-bottom: 0;
+}
+
+.tooltip-label {
+  font-size: var(--marine-font-xs);
+  color: var(--text-secondary);
+}
+
+.tooltip-value {
+  font-size: var(--marine-font-xs);
+  font-family: var(--marine-font-family-mono);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Stats Panel */
+.bathy-stats {
+  position: absolute;
+  top: var(--marine-spacing-md);
+  left: var(--marine-spacing-md);
+  display: flex;
+  gap: var(--marine-spacing-md);
+  padding: var(--marine-spacing-sm);
+  background: var(--marine-surface);
+  border: 1px solid var(--marine-border);
+  border-radius: var(--marine-border-sm);
+  box-shadow: var(--marine-shadow-md);
+  z-index: 10;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--marine-xxxs);
+}
+
+.stat-label {
+  font-size: var(--marine-font-xs);
+  color: var(--text-secondary);
+}
+
+.stat-value {
+  font-size: var(--marine-font-sm);
+  font-family: var(--marine-font-family-mono);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Empty State */
+.bathymetry-viewer.empty .bathy-canvas::after {
+  content: 'No bathymetry data available';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--text-secondary);
+  font-size: var(--marine-font-sm);
+}
+
+/* Night Mode */
+.bathymetry-viewer[data-theme="night"] {
+  --highlight: #ff6666;
+}
+
+/* Touch Optimizations */
+@media (pointer: coarse) {
+  .bathy-controls button {
+    padding: var(--marine-spacing-sm);
+    font-size: var(--marine-font-sm);
+  }
+
+  .bathy-tooltip {
+    min-width: 220px;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .bathymetry-viewer {
+    height: 300px;
+  }
+
+  .color-scale {
+    height: 80px;
+  }
+
+  .bathy-stats {
+    flex-direction: column;
+    gap: var(--marine-spacing-sm);
+  }
+}

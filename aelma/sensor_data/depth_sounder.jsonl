@@ -1,0 +1,5 @@
+{"sensor_id": "depth_sounder_1", "depth_m": 45.2, "depth_ft": 148.293968, "depth_fathoms": 24.715676400000003, "timestamp_ns": 1785299011468054800, "raw_packet_hex": "44455054483d34352e32"}
+{"sensor_id": "depth_sounder_1", "depth_m": 52.8, "depth_ft": 173.228352, "depth_fathoms": 28.8714096, "timestamp_ns": 1785299011568682200, "raw_packet_hex": "44455054483d35322e38"}
+{"sensor_id": "depth_sounder_1", "depth_m": 38.1, "depth_ft": 125.000004, "depth_fathoms": 20.833346700000003, "timestamp_ns": 1785299011669548600, "raw_packet_hex": "44455054483d33382e31"}
+{"sensor_id": "depth_sounder_1", "depth_m": 48.5, "depth_ft": 159.12074, "depth_fathoms": 26.520139500000003, "timestamp_ns": 1785299011770594500, "raw_packet_hex": "34382e356d"}
+{"sensor_id": "depth_sounder_1", "depth_m": 42.3, "depth_ft": 138.779532, "depth_fathoms": 23.129936100000002, "timestamp_ns": 1785299011871513400, "raw_packet_hex": "34322e33"}

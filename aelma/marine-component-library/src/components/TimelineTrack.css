@@ -1,0 +1,222 @@
+/**
+ * TimelineTrack styles
+ * DAW-style timeline with touch controls
+ */
+
+.timeline-track {
+  --timeline-bg: var(--marine-surface);
+  --timeline-border: var(--marine-border);
+  --timeline-ruler: var(--marine-divider);
+  --cursor-color: var(--marine-error);
+  --text-primary: var(--marine-text);
+  --text-secondary: var(--marine-text-secondary);
+
+  position: relative;
+  width: 100%;
+  height: 120px;
+  background: var(--timeline-bg);
+  border: 1px solid var(--timeline-border);
+  border-radius: var(--marine-border-lg);
+  overflow: hidden;
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* Time Scale */
+.timeline-scale {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background: var(--marine-surface-variant);
+  border-bottom: 1px solid var(--timeline-ruler);
+  overflow: hidden;
+}
+
+.timeline-mark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--timeline-ruler);
+}
+
+.timeline-mark .mark-label {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: var(--marine-font-xs);
+  font-family: var(--marine-font-family-mono);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Events Container */
+.timeline-events {
+  position: absolute;
+  top: 24px;
+  left: 0;
+  height: calc(100% - 24px);
+  pointer-events: none;
+}
+
+/* Event Blocks */
+.timeline-event {
+  position: absolute;
+  top: 8px;
+  min-height: var(--marine-touch-target-minimum);
+  padding: var(--marine-spacing-xs);
+  border-radius: var(--marine-border-sm);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: all var(--marine-animation-fast);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  box-shadow: var(--marine-shadow-sm);
+}
+
+.timeline-event:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--marine-shadow-md);
+}
+
+.timeline-event.selected {
+  box-shadow: 0 0 0 2px var(--marine-primary);
+  transform: translateY(-2px);
+}
+
+.timeline-event.alert {
+  background: linear-gradient(135deg, rgba(224, 75, 75, 0.8), rgba(224, 75, 75, 0.6));
+}
+
+.timeline-event.action {
+  background: linear-gradient(135deg, rgba(53, 224, 138, 0.8), rgba(53, 224, 138, 0.6));
+}
+
+.timeline-event.state_change {
+  background: linear-gradient(135deg, rgba(111, 147, 179, 0.8), rgba(111, 147, 179, 0.6));
+}
+
+.timeline-event.waypoint {
+  background: linear-gradient(135deg, rgba(255, 119, 0, 0.8), rgba(255, 119, 0, 0.6));
+}
+
+.event-label {
+  font-size: var(--marine-font-xs);
+  font-weight: 500;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Current Time Cursor */
+.timeline-cursor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--cursor-color);
+  z-index: 10;
+  pointer-events: none;
+  transition: left var(--marine-animation-fast);
+}
+
+.cursor-head {
+  position: absolute;
+  top: 0;
+  left: -5px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid var(--cursor-color);
+}
+
+/* Waveform Canvas */
+.timeline-waveform {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 40px;
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+/* Zoom Indicator */
+.zoom-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: var(--marine-spacing-sm) var(--marine-spacing-md);
+  background: var(--marine-surface);
+  border: 1px solid var(--marine-border);
+  border-radius: var(--marine-border-md);
+  font-size: var(--marine-font-sm);
+  font-weight: 600;
+  font-family: var(--marine-font-family-mono);
+  color: var(--text-primary);
+  box-shadow: var(--marine-shadow-lg);
+  z-index: 20;
+}
+
+/* Touch Optimizations */
+@media (pointer: coarse) {
+  .timeline-track {
+    height: 140px;
+  }
+
+  .timeline-event {
+    min-height: var(--marine-touch-target-comfortable);
+    padding: var(--marine-spacing-sm);
+  }
+
+  .event-label {
+    font-size: var(--marine-font-sm);
+  }
+}
+
+/* Night Mode */
+.timeline-track[data-theme="night"] {
+  --cursor-color: #ff3333;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .timeline-track {
+    height: 100px;
+  }
+
+  .timeline-scale {
+    height: 20px;
+  }
+
+  .timeline-mark .mark-label {
+    font-size: 10px;
+  }
+}
+
+/* Animations */
+@keyframes pulse-event {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.timeline-event.alert {
+  animation: pulse-event 2s infinite;
+}
+
+/* Empty state */
+.timeline-track.empty .timeline-events::after {
+  content: 'No events to display';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--text-secondary);
+  font-size: var(--marine-font-sm);
+}

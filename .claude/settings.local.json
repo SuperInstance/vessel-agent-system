@@ -46,7 +46,9 @@
       "Bash(timeout 90 python -m pytest:*)",
       "Bash(tree:*)",
       "Bash(xargs:*)",
-      "Bash(netstat:*)"
+      "Bash(netstat:*)",
+      "Bash(timeout 10 python:*)",
+      "Bash(nc:*)"
     ]
   }
 }

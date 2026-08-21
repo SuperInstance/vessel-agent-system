@@ -1,0 +1,446 @@
+/**
+ * NMEAStream styles
+ * Real-time NMEA sentence display with filtering
+ */
+
+.nmea-stream {
+  --panel-bg: var(--marine-surface);
+  --panel-border: var(--marine-border);
+  --text-primary: var(--marine-text);
+  --text-secondary: var(--marine-text-secondary);
+  --code-bg: var(--marine-surface-variant);
+
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--marine-border-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+}
+
+/* Header */
+.nmea-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--marine-spacing-sm) var(--marine-spacing-md);
+  background: var(--marine-surface-variant);
+  border-bottom: 1px solid var(--marine-divider);
+}
+
+.nmea-title {
+  margin: 0;
+  font-size: var(--marine-font-md);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.nmea-stats {
+  display: flex;
+  gap: var(--marine-spacing-sm);
+}
+
+.nmea-stat {
+  font-size: var(--marine-font-xs);
+  color: var(--text-secondary);
+  font-family: var(--marine-font-family-mono);
+}
+
+/* Controls */
+.nmea-controls {
+  display: flex;
+  gap: var(--marine-spacing-xs);
+  padding: var(--marine-spacing-sm) var(--marine-spacing-md);
+  border-bottom: 1px solid var(--marine-divider);
+  background: var(--marine-surface);
+}
+
+.nmea-filter {
+  flex: 1;
+  padding: var(--marine-spacing-xs) var(--marine-spacing-sm);
+  border: 1px solid var(--marine-border);
+  border-radius: var(--marine-border-sm);
+  background: var(--marine-surface-variant);
+  color: var(--text-primary);
+  font-size: var(--marine-font-sm);
+  outline: none;
+}
+
+.nmea-filter:focus {
+  border-color: var(--marine-primary);
+}
+
+.nmea-btn {
+  padding: var(--marine-spacing-xs) var(--marine-spacing-sm);
+  border: 1px solid var(--marine-border);
+  border-radius: var(--marine-border-sm);
+  background: var(--marine-surface-variant);
+  color: var(--text-primary);
+  font-size: var(--marine-font-sm);
+  cursor: pointer;
+  transition: all var(--marine-animation-fast);
+}
+
+.nmea-btn:hover {
+  background: var(--marine-surface);
+}
+
+.nmea-btn.active {
+  background: var(--marine-primary);
+  color: white;
+  border-color: var(--marine-primary);
+}
+
+/* Type filter chips */
+.nmea-types {
+  display: flex;
+  gap: var(--marine-xxxs);
+  padding: var(--marine-spacing-xs) var(--marine-spacing-md);
+  border-bottom: 1px solid var(--marine-divider);
+  overflow-x: auto;
+  background: var(--marine-surface);
+}
+
+.type-chip {
+  padding: var(--marine-xxxs) var(--marine-spacing-xs);
+  border: 1px solid var(--marine-border);
+  border-radius: var(--marine-border-sm);
+  background: var(--marine-surface-variant);
+  color: var(--text-primary);
+  font-size: var(--marine-font-xs);
+  font-family: var(--marine-font-family-mono);
+  cursor: pointer;
+  transition: all var(--marine-animation-fast);
+  white-space: nowrap;
+}
+
+.type-chip:hover {
+  background: var(--marine-surface);
+}
+
+.type-chip.active {
+  font-weight: 600;
+}
+
+/* Sentences list */
+.nmea-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--marine-spacing-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--marine-xxxs);
+}
+
+.nmea-empty {
+  padding: var(--marine-spacing-xl);
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: var(--marine-font-sm);
+  font-style: italic;
+}
+
+/* Sentence item */
+.nmea-item {
+  display: flex;
+  gap: var(--marine-spacing-sm);
+  padding: var(--marine-spacing-xs);
+  background: var(--code-bg);
+  border: 1px solid var(--marine-border);
+  border-left-width: 3px;
+  border-left-style: solid;
+  border-radius: var(--marine-border-sm);
+  cursor: pointer;
+  transition: all var(--marine-animation-fast);
+  align-items: center;
+}
+
+.nmea-item:hover {
+  box-shadow: var(--marine-shadow-sm);
+  transform: translateX(2px);
+}
+
+.nmea-item.selected {
+  background: var(--marine-primary);
+  color: white;
+}
+
+.nmea-item.highlighted {
+  background: linear-gradient(90deg, var(--marine-surface-variant), var(--marine-highlight));
+}
+
+.nmea-item.invalid {
+  background: linear-gradient(90deg, rgba(224, 75, 75, 0.1), var(--code-bg));
+}
+
+.nmea-type {
+  flex-shrink: 0;
+  font-weight: 600;
+  font-family: var(--marine-font-family-mono);
+  font-size: var(--marine-font-xs);
+  min-width: 48px;
+}
+
+.nmea-time {
+  flex-shrink: 0;
+  font-size: var(--marine-font-xs);
+  font-family: var(--marine-font-family-mono);
+  color: var(--text-secondary);
+  min-width: 80px;
+}
+
+.nmea-item.selected .nmea-time {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.nmea-raw {
+  flex: 1;
+  font-family: var(--marine-font-family-mono);
+  font-size: var(--marine-font-xs);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nmea-item.selected .nmea-raw {
+  color: white;
+}
+
+.nmea-checksum {
+  flex-shrink: 0;
+  font-size: var(--marine-font-sm);
+  font-weight: 600;
+}
+
+.nmea-checksum.valid {
+  color: var(--marine-success);
+}
+
+.nmea-checksum.invalid {
+  color: var(--marine-error);
+}
+
+.nmea-parsed {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--marine-spacing-sm);
+  padding: var(--marine-spacing-xs);
+  background: var(--marine-surface);
+  border-radius: var(--marine-border-sm);
+  margin-top: var(--marine-xxxs);
+}
+
+.parsed-item {
+  display: flex;
+  gap: var(--marine-xxxs);
+  font-size: var(--marine-font-xs);
+  font-family: var(--marine-font-family-mono);
+}
+
+.parsed-key {
+  color: var(--text-secondary);
+}
+
+.parsed-value {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Modal */
+.nmea-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--marine-spacing-md);
+}
+
+.nmea-modal-content {
+  background: var(--marine-surface);
+  border-radius: var(--marine-border-lg);
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--marine-shadow-xl);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--marine-spacing-md);
+  border-bottom: 1px solid var(--marine-divider);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: var(--marine-font-lg);
+  color: var(--text-primary);
+  font-family: var(--marine-font-family-mono);
+}
+
+.btn-close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--marine-font-lg);
+  cursor: pointer;
+}
+
+.btn-close:hover {
+  color: var(--text-primary);
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--marine-spacing-md);
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--marine-spacing-xs) 0;
+  border-bottom: 1px solid var(--marine-divider);
+}
+
+.detail-label {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.detail-value {
+  font-family: var(--marine-font-family-mono);
+  color: var(--text-primary);
+}
+
+.detail-value.valid {
+  color: var(--marine-success);
+}
+
+.detail-value.invalid {
+  color: var(--marine-error);
+}
+
+.detail-section {
+  margin-top: var(--marine-spacing-md);
+}
+
+.detail-section h4 {
+  margin: 0 0 var(--marine-spacing-sm) 0;
+  font-size: var(--marine-font-sm);
+  color: var(--text-secondary);
+}
+
+.nmea-raw-display {
+  margin: 0;
+  padding: var(--marine-spacing-sm);
+  background: var(--marine-surface-variant);
+  border-radius: var(--marine-border-sm);
+  font-family: var(--marine-font-family-mono);
+  font-size: var(--marine-font-xs);
+  color: var(--text-primary);
+  overflow-x: auto;
+  word-break: break-all;
+}
+
+.parsed-data {
+  display: flex;
+  flex-direction: column;
+  gap: var(--marine-xxxs);
+}
+
+.parsed-row {
+  display: flex;
+  gap: var(--marine-spacing-sm);
+  padding: var(--marine-spacing-xs);
+  background: var(--marine-surface-variant);
+  border-radius: var(--marine-border-sm);
+}
+
+.parsed-row .parsed-key {
+  min-width: 120px;
+  color: var(--text-secondary);
+  font-size: var(--marine-font-xs);
+}
+
+.parsed-row .parsed-value {
+  color: var(--text-primary);
+  font-family: var(--marine-font-family-mono);
+  font-size: var(--marine-font-xs);
+}
+
+/* Compact mode */
+.nmea-stream.compact .nmea-item {
+  padding: var(--marine-xxxs) var(--marine-spacing-xs);
+}
+
+.nmea-stream.compact .nmea-type,
+.nmea-stream.compact .nmea-time,
+.nmea-stream.compact .nmea-raw {
+  font-size: 10px;
+}
+
+/* Night mode */
+.nmea-stream[data-theme="night"] {
+  --code-bg: #1a1a1a;
+}
+
+/* Touch optimizations */
+@media (pointer: coarse) {
+  .nmea-item {
+    padding: var(--marine-spacing-sm);
+    min-height: var(--marine-touch-target-minimum);
+  }
+
+  .nmea-type,
+  .nmea-time {
+    min-width: 60px;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .nmea-controls {
+    flex-wrap: wrap;
+  }
+
+  .nmea-filter {
+    min-width: 100%;
+  }
+
+  .nmea-types {
+    justify-content: flex-start;
+  }
+}
+
+/* Animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.nmea-item {
+  animation: fade-in 0.2s ease-out;
+}
